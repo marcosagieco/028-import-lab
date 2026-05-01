@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc, setDoc, getDoc, increment, query, orderBy, limit } from "firebase/firestore";
+// --- ESTA ES LA LÍNEA QUE AGREGAMOS ---
+import CalculadorEnvio from '@/components/CalculadorEnvio'; 
 
 const CONFIG = {
   brandName: "028", 
@@ -15,17 +17,17 @@ const CONFIG = {
 };
 
 const AVAILABLE_ICONS = [
-  { id: 'fa-star', prefix: 'fas', color: 'text-[#fcdb00]' },     
-  { id: 'fa-fire', prefix: 'fas', color: 'text-red-500' },       
-  { id: 'fa-bolt', prefix: 'fas', color: 'text-yellow-400' },    
-  { id: 'fa-crown', prefix: 'fas', color: 'text-amber-500' },    
-  { id: 'fa-gem', prefix: 'fas', color: 'text-purple-500' },     
-  { id: 'fa-heart', prefix: 'fas', color: 'text-pink-500' },     
-  { id: 'fa-tag', prefix: 'fas', color: 'text-green-500' },      
-  { id: 'fa-gift', prefix: 'fas', color: 'text-blue-500' },      
-  { id: 'fa-rocket', prefix: 'fas', color: 'text-orange-500' },  
+  { id: 'fa-star', prefix: 'fas', color: 'text-[#fcdb00]' },      
+  { id: 'fa-fire', prefix: 'fas', color: 'text-red-500' },        
+  { id: 'fa-bolt', prefix: 'fas', color: 'text-yellow-400' },     
+  { id: 'fa-crown', prefix: 'fas', color: 'text-amber-500' },     
+  { id: 'fa-gem', prefix: 'fas', color: 'text-purple-500' },      
+  { id: 'fa-heart', prefix: 'fas', color: 'text-pink-500' },      
+  { id: 'fa-tag', prefix: 'fas', color: 'text-green-500' },       
+  { id: 'fa-gift', prefix: 'fas', color: 'text-blue-500' },       
+  { id: 'fa-rocket', prefix: 'fas', color: 'text-orange-500' },   
   { id: 'fa-award', prefix: 'fas', color: 'text-indigo-500' },
-  { id: 'fa-apple', prefix: 'fab', color: 'text-gray-800' } 
+  { id: 'fa-apple', prefix: 'fab', color: 'text-gray-800' }  
 ];
 
 const DEPT_ICONS = [
@@ -616,6 +618,9 @@ export default function Home() {
                       {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                   </div>
+                  {/* --- ACÁ INSERTAMOS EL CALCULADOR --- */}
+                  <CalculadorEnvio />
+                  
                   <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
                   <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
                   <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
