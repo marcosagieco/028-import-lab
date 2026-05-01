@@ -84,7 +84,20 @@ export default function CalculadorEnvio() {
     setMap(mapInstance);
   }, []);
 
-  if (!isLoaded) return <div className="p-4 text-center text-gray-500 font-bold text-xs uppercase tracking-widest"><i className="fas fa-spinner fa-spin mr-2"></i> Cargando mapa...</div>;
+  // DISEÑO DE CARGA PROFESIONAL (SKELETON)
+  if (!isLoaded) return (
+    <div className="p-5 border border-gray-200 rounded-2xl bg-white mt-4 text-[#111111] shadow-sm">
+      <h3 className="font-bebas text-2xl mb-1 uppercase tracking-wide flex items-center gap-2 text-gray-300">
+        <i className="fas fa-motorcycle"></i> Calculá tu envío
+      </h3>
+      <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-4">
+        Conectando con el satélite...
+      </p>
+      <div className="w-full pl-4 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold text-gray-400 flex items-center gap-3">
+        <i className="fas fa-circle-notch fa-spin text-[#fcdb00]"></i> Cargando mapa seguro...
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-5 border border-gray-200 rounded-2xl bg-white mt-4 text-[#111111] shadow-sm">
@@ -124,10 +137,7 @@ export default function CalculadorEnvio() {
           ]
         }}
       >
-        {/* Marcador de tu local */}
         <Marker position={centerLocal} />
-        
-        {/* Marcador del cliente */}
         {markerPos && <Marker position={markerPos} />}
       </GoogleMap>
 

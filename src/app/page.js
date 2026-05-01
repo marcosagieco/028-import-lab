@@ -631,11 +631,9 @@ export default function Home() {
                 </div>
               )}
               </div>
-              {deliveryMethod === 'envio' && shippingType === 'moto' && (
-                <div className="mt-4 animate-in fade-in zoom-in-95 duration-300">
-                  <CalculadorEnvio />
-                </div>
-              )}
+              <div className={`mt-4 animate-in fade-in zoom-in-95 duration-300 ${deliveryMethod === 'envio' && shippingType === 'moto' ? 'block' : 'hidden'}`}>
+                <CalculadorEnvio />
+              </div>
               </div>)}</div>{cart.length > 0 && (<div className="p-6 bg-white border-t border-gray-200 sticky bottom-0 z-20"><div className="flex justify-between items-end mb-4"><span className="font-bold text-gray-500 text-[10px] uppercase tracking-widest font-poppins">Total a Pagar</span><span className="font-bebas text-5xl text-[#111111] tracking-wide leading-none drop-shadow-sm"><span className="text-[#fcdb00] text-3xl mr-1.5">{CONFIG.currencySymbol}</span>{formatPrice(calculateTotal())}</span></div><button onClick={handleCheckout} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500 border-none' : 'bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] active:scale-95'} font-bebas py-4 rounded-xl uppercase tracking-wider text-xl flex justify-center items-center gap-3 transition-all duration-300`}>{isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Confirmar Pedido</>}</button></div>)}</div></div>)}
       
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] flex flex-col items-end gap-3 group">
