@@ -1,21 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import CalculadorEnvio from '@/components/CalculadorEnvio';
+import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc, setDoc, getDoc, increment, query, orderBy, limit } from "firebase/firestore";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { 
+  getFirestore, collection, onSnapshot, query, orderBy, updateDoc, deleteDoc, doc, setDoc, serverTimestamp 
+} from "firebase/firestore";
 
 const CONFIG = {
   brandName: "028", 
-  whatsappNumber: "5491153412358", 
-  logoImage: "https://i.postimg.cc/jS33XBZm/028logo-convertido-de-jpeg-removebg-preview.png", 
-  bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
-  currencySymbol: "$",
-  shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- TU ALIAS ACÁ
+  logoImage: "https://i.postimg.cc/jS33XBZm/028logo-convertido-de-jpeg-removebg-preview.png",
 };
 
+// Íconos para las Secciones de la Vidriera
 const AVAILABLE_ICONS = [
   { id: 'fa-star', prefix: 'fas', color: 'text-[#fcdb00]' },     
   { id: 'fa-fire', prefix: 'fas', color: 'text-red-500' },       
@@ -27,11 +24,26 @@ const AVAILABLE_ICONS = [
   { id: 'fa-gift', prefix: 'fas', color: 'text-blue-500' },      
   { id: 'fa-rocket', prefix: 'fas', color: 'text-orange-500' },  
   { id: 'fa-award', prefix: 'fas', color: 'text-indigo-500' },
-  { id: 'fa-apple', prefix: 'fab', color: 'text-gray-800' } 
+  { id: 'fa-apple', prefix: 'fab', color: 'text-gray-800' }
 ];
 
+// Íconos EXCLUSIVOS para los Departamentos
 const DEPT_ICONS = [
-  { id: 'fa-box', prefix: 'fas' }, { id: 'fa-wind', prefix: 'fas' }, { id: 'fa-leaf', prefix: 'fas' }, { id: 'fa-microchip', prefix: 'fas' }, { id: 'fa-star', prefix: 'fas' }, { id: 'fa-fire', prefix: 'fas' }, { id: 'fa-apple', prefix: 'fab' }, { id: 'fa-mobile-alt', prefix: 'fas' }, { id: 'fa-laptop', prefix: 'fas' }, { id: 'fa-gamepad', prefix: 'fas' }, { id: 'fa-headphones', prefix: 'fas' }, { id: 'fa-gem', prefix: 'fas' }, { id: 'fa-tag', prefix: 'fas' }, { id: 'fa-cannabis', prefix: 'fas' }, { id: 'fa-smoking', prefix: 'fas' },
+  { id: 'fa-box', prefix: 'fas' },
+  { id: 'fa-wind', prefix: 'fas' },
+  { id: 'fa-leaf', prefix: 'fas' },
+  { id: 'fa-microchip', prefix: 'fas' },
+  { id: 'fa-star', prefix: 'fas' },
+  { id: 'fa-fire', prefix: 'fas' },
+  { id: 'fa-apple', prefix: 'fab' }, 
+  { id: 'fa-mobile-alt', prefix: 'fas' },
+  { id: 'fa-laptop', prefix: 'fas' },
+  { id: 'fa-gamepad', prefix: 'fas' },
+  { id: 'fa-headphones', prefix: 'fas' },
+  { id: 'fa-gem', prefix: 'fas' },
+  { id: 'fa-tag', prefix: 'fas' },
+  { id: 'fa-cannabis', prefix: 'fas' },
+  { id: 'fa-smoking', prefix: 'fas' },
 ];
 
 const initialProducts = [
@@ -84,675 +96,507 @@ const initialProducts = [
   { id: 24, name: "CABLE USB-C A LIGHTNING 2M", price: 13500, department: "TECNOLOGÍA", category: "PRODUCTOS APPLE", tag: "", image: "https://i.postimg.cc/QCvPcQkg/usb-c-to-lightning-cable.jpg", description: "Cable original Apple USB-C a Lightning de 2 metros.", cardSize: "normal" }
 ];
 
-const PAGE_CONTENT = {
-  terminos: { title: "Términos y Condiciones", subtitle: "Políticas Legales", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p><strong>1. Naturaleza del Servicio:</strong> 028 IMPORT opera como intermediario e importador directo de productos tecnológicos y artículos de vapeo de primera línea.</p><p><strong>2. Precios y Disponibilidad:</strong> Los valores publicados y el stock se encuentran sujetos a modificaciones sin previo aviso, derivado de la dinámica propia de la importación y las fluctuaciones cambiarias del mercado.</p><p><strong>3. Proceso y Confirmación de Compra:</strong> La selección de artículos a través de esta plataforma web representa una solicitud o intención de reserva. La transacción únicamente se considerará perfeccionada y confirmada tras la comunicación directa con nuestro equipo comercial vía WhatsApp y la posterior acreditación del pago.</p><p><strong>4. Garantías y Responsabilidad:</strong> Garantizamos la originalidad y autenticidad del 100% de nuestro catálogo. Se contempla garantía exclusiva por defectos de fabricación de origen. 028 IMPORT no asume responsabilidad alguna por daños derivados del mal uso, manipulación incorrecta o desgaste natural de los dispositivos adquiridos.</p></div>) },
-  privacidad: { title: "Política de Privacidad", subtitle: "Protección de Datos", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad. Los datos recopilados durante el proceso de reserva son utilizados estrictamente para fines logísticos y de facturación.</p></div>) },
-  pagos: { title: "Medios de Pago", subtitle: "Transacciones Seguras", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En <strong>028 IMPORT</strong> priorizamos la seguridad, agilidad y transparencia en cada operación financiera. Con el objetivo de proteger su integridad crediticia, todas las transacciones de pago se procesan de manera externa a nuestro sitio web.</p><div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mt-4"><h3 className="font-bebas text-2xl uppercase tracking-wide mb-4 text-[#111111]">Opciones Habilitadas:</h3><ul className="space-y-4"><li><strong><i className="fas fa-university text-[#b8952a] mr-2"></i> Transferencia Bancaria (ARS/USD):</strong> Acreditación inmediata. Las coordenadas bancarias (CBU/Alias) se suministrarán exclusivamente vía WhatsApp al validar su pedido.</li><li><strong><i className="fas fa-money-bill-wave text-[#b8952a] mr-2"></i> Efectivo Contra Entrega:</strong> Modalidad disponible únicamente para logística vía Motomensajería dentro de CABA y GBA, o retiros de forma presencial en nuestro showroom.</li><li><strong><i className="fab fa-bitcoin text-[#b8952a] mr-2"></i> Criptomonedas (USDT):</strong> Operamos a través de la red TRC-20 u otras a convenir. Consulte la cotización del momento con su asesor comercial.</li></ul></div><p className="mt-6 p-4 bg-red-50 text-red-800 rounded-xl border border-red-200 text-sm"><strong>⚠️ Importante:</strong> Bajo ninguna circunstancia el personal de 028 IMPORT le solicitará los dígitos de su tarjeta de crédito, claves de seguridad o contraseñas bancarias a través de esta plataforma ni por canales no oficiales.</p></div>) },
-  arrepentimiento: { title: "Botón de Arrepentimiento", subtitle: "Devoluciones", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>Usted tiene el derecho irrevocable de cancelar su compra dentro de un plazo máximo de 10 días corridos.</p></div>) }
-};
+const initialHomeSections = [
+  { id: 'sec_mas_buscados', title: "MÁS BUSCADOS", icon: 'fa-fire', iconColor: 'text-red-500', productIds: [4, 8, 20], order: 1, layout: 'horizontal' },
+  { id: 'sec_nuevos_ingresos', title: "NUEVOS INGRESOS", icon: 'fa-bolt', iconColor: 'text-[#fcdb00]', productIds: [18, 28, 29], order: 2, layout: 'horizontal' }
+];
 
-export default function Home() {
-  const [cart, setCart] = useState([]);
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState('historial'); 
+  const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState(initialProducts);
   const [promos, setPromos] = useState([]);
-  const [homeSections, setHomeSections] = useState([]); 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('home'); 
-  const [activeFilter, setActiveFilter] = useState({ dept: 'all', cat: 'all' });
-  const [expandedDept, setExpandedDept] = useState(null);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [deliveryMethod, setDeliveryMethod] = useState('retiro');
-  const [shippingType, setShippingType] = useState('flash'); 
-  const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [zone, setZone] = useState('');
-  const [aptDetails, setAptDetails] = useState(''); 
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
-  const [deptIcons, setDeptIcons] = useState({});
-  const [user, setUser] = useState(null);
-  const [dbUser, setDbUser] = useState(null); 
-  const [fomoData, setFomoData] = useState(null);
-  const [isSending, setIsSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [toastMessage, setToastMessage] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
-  const [activeCouponsDb, setActiveCouponsDb] = useState([]); 
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  // --- ESTADOS PARA CUPONES, USUARIOS Y OFERTAS (UPSELLS) ---
+  const [coupons, setCoupons] = useState([]);
+  const [usersList, setUsersList] = useState([]);
+  const [newCoupon, setNewCoupon] = useState({ code: '', discount: '' });
+  
   const [upsellsList, setUpsellsList] = useState([]);
+  const [newUpsell, setNewUpsell] = useState({ productId: '', price: '' });
 
-  const departments = useMemo(() => [...new Set(products.map(p => p.department).filter(Boolean))], [products]);
-  const uniqueCategories = useMemo(() => {
-    if (activeFilter.dept !== 'all') return [...new Set(products.filter(p => p.department === activeFilter.dept).map(p => p.category))];
-    return [...new Set(products.map(p => p.category))];
-  }, [products, activeFilter.dept]);
+  const [homeSections, setHomeSections] = useState([]);
+  const [newPromo, setNewPromo] = useState({ category: '', minQty: 2, totalPrice: '' });
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [newSectionIcon, setNewSectionIcon] = useState(AVAILABLE_ICONS[0]); 
+  const [newSectionLayout, setNewSectionLayout] = useState('horizontal'); 
+  
+  const [deptIcons, setDeptIcons] = useState({}); 
+  
+  const [loading, setLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(false); 
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', department: 'VAPES', category: '', image: '', tag: '', description: '', cardSize: 'normal' });
+  const [isAdding, setIsAdding] = useState(false);
 
-  const slugify = (text) => text.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');            
+  const uniqueCategories = useMemo(() => [...new Set(products.filter(p => !p.isDeleted).map(p => p.category))], [products]);
+  const PREDEFINED_DEPARTMENTS = ["VAPES", "THC", "TECNOLOGÍA", "APPLE"];
+  const availableDepartments = useMemo(() => Array.from(new Set([...PREDEFINED_DEPARTMENTS, ...products.filter(p => !p.isDeleted).map(p => p.department).filter(Boolean)])), [products]);
+
+  const clientsList = useMemo(() => {
+    const clientsMap = new Map();
+    orders.forEach(o => {
+      if (o.clientPhone && o.clientName) {
+        if (!clientsMap.has(o.clientPhone)) { clientsMap.set(o.clientPhone, { name: o.clientName, phone: o.clientPhone, orderCount: 1, lastOrder: o.createdAt }); } 
+        else { const ex = clientsMap.get(o.clientPhone); ex.orderCount += 1; if (o.createdAt > ex.lastOrder) ex.lastOrder = o.createdAt; }
+      }
+    });
+    return Array.from(clientsMap.values()).sort((a, b) => b.lastOrder - a.lastOrder);
+  }, [orders]);
+
+  useEffect(() => {
+    document.title = `${CONFIG.brandName} - Admin`;
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.getElementsByTagName('head')[0].appendChild(link); }
+    link.href = CONFIG.logoImage;
+  }, []);
 
   const firebaseRefs = useMemo(() => {
     if (typeof window === "undefined") return { auth: null, db: null };
     try {
-      const firebaseConfig = { apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY, authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID };
-      const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+      const config = { apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY, authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID };
+      const app = !getApps().length ? initializeApp(config) : getApp();
       return { auth: getAuth(app), db: getFirestore(app) };
-    } catch (error) { return { auth: null, db: null }; }
+    } catch (err) { return { auth: null, db: null, err: err.message }; }
   }, []);
 
   useEffect(() => {
-    const showTimer = setTimeout(() => setShowTooltip(true), 2500);
-    const hideTimer = setTimeout(() => setShowTooltip(false), 9000);
-    return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
-  }, []);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => { if (entry.isIntersecting) entry.target.classList.add("is-visible"); });
-      }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" } 
-    );
-    const timeoutId = setTimeout(() => {
-        const elements = document.querySelectorAll('.reveal-on-scroll');
-        elements.forEach((el) => observer.observe(el));
-    }, 100);
-    return () => { clearTimeout(timeoutId); observer.disconnect(); }
-  }, [currentView, activeFilter, products, searchTerm, homeSections]);
-
-  const isFirstLoad = useRef(true);
-  useEffect(() => {
-    if (!firebaseRefs.db) return;
-    const qFomo = query(collection(firebaseRefs.db, 'orders'), orderBy('createdAt', 'desc'), limit(1));
-    const unsubscribeFomo = onSnapshot(qFomo, (snap) => {
-        if (isFirstLoad.current) { isFirstLoad.current = false; return; }
-        snap.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const o = change.doc.data();
-                if (o.clientName && o.items?.length > 0) {
-                    const firstName = o.clientName.split(' ')[0]; 
-                    setFomoData({ name: firstName, product: o.items[0].name });
-                    setTimeout(() => setFomoData(null), 6000);
-                }
-            }
-        });
-    });
-    return () => unsubscribeFomo();
-  }, [firebaseRefs.db]);
-
-  useEffect(() => {
-    const handleFocus = () => setIsSending(false);
-    window.addEventListener('focus', handleFocus); window.addEventListener('pageshow', handleFocus);
-    if (firebaseRefs.auth && firebaseRefs.db) {
-      const unsubscribeAuth = onAuthStateChanged(firebaseRefs.auth, (u) => {
-        setUser(u);
-        if (!u) { signInAnonymously(firebaseRefs.auth).catch(console.error); }
-      });
-      const unsubscribeStock = onSnapshot(collection(firebaseRefs.db, 'products'), (snapshot) => {
-        if (!snapshot.empty) {
-          const dbProducts = snapshot.docs.map(doc => ({ dbId: doc.id, ...doc.data() }));
+    if (!firebaseRefs.auth || !firebaseRefs.db) return;
+    signInAnonymously(firebaseRefs.auth).catch(console.error);
+    onAuthStateChanged(firebaseRefs.auth, (user) => {
+      if (!user) return;
+      onSnapshot(query(collection(firebaseRefs.db, 'orders'), orderBy('createdAt', 'desc')), (snap) => { setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); });
+      
+      onSnapshot(collection(firebaseRefs.db, 'products'), (snap) => {
+        if (!snap.empty) {
+          const dbProducts = snap.docs.map(doc => ({ dbId: doc.id, ...doc.data() }));
           setProducts(prev => {
-             const combined = [...initialProducts];
-             dbProducts.forEach(dbItem => {
-                const index = combined.findIndex(p => p.id == dbItem.id);
-                if (dbItem.isHidden || dbItem.isDeleted) { if (index > -1) combined.splice(index, 1); }
-                else { if (index > -1) combined[index] = { ...combined[index], ...dbItem }; else combined.push(dbItem); }
-             });
-             return combined.sort((a, b) => (a.order || 99) - (b.order || 99));
+             const updatedInitial = initialProducts.map(p => { 
+               const match = dbProducts.find(dbP => dbP.id === p.id); 
+               if (match && match.isDeleted) return null; 
+               return match ? { ...p, ...match } : { ...p, inStock: true, order: 99, isHidden: false, cardSize: 'normal', clicks: 0 }; 
+             }).filter(Boolean); 
+             const newFromDb = dbProducts.filter(dbP => !initialProducts.find(p => p.id === dbP.id) && !dbP.isDeleted).map(dbP => ({...dbP, isHidden: dbP.isHidden || false, cardSize: dbP.cardSize || 'normal', clicks: dbP.clicks || 0})); 
+             return [...updatedInitial, ...newFromDb].sort((a, b) => (a.order || 99) - (b.order || 99));
           });
         }
       });
-      const unsubscribePromos = onSnapshot(collection(firebaseRefs.db, 'promos'), (s) => setPromos(!s.empty ? s.docs.map(d => ({ id: d.id, ...d.data() })) : []));
-      const unsubscribeHomeSections = onSnapshot(collection(firebaseRefs.db, 'home_sections'), (s) => setHomeSections(!s.empty ? s.docs.map(d => ({ dbId: d.id, ...d.data() })).sort((a, b) => a.order - b.order) : []));
-      const unsubscribeDeptIcons = onSnapshot(doc(firebaseRefs.db, 'settings', 'departments'), (snap) => {
-        if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
-      });
-      const unsubscribeCoupons = onSnapshot(collection(firebaseRefs.db, 'coupons'), (snap) => setActiveCouponsDb(!snap.empty ? snap.docs.map(d => d.data()) : []));
-      const unsubscribeUpsells = onSnapshot(collection(firebaseRefs.db, 'upsells'), (snap) => {
+      
+      onSnapshot(collection(firebaseRefs.db, 'promos'), (snap) => setPromos(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []));
+      onSnapshot(collection(firebaseRefs.db, 'home_sections'), (snap) => setHomeSections(!snap.empty ? snap.docs.map(d => ({ dbId: d.id, ...d.data() })).sort((a, b) => a.order - b.order) : []));
+      
+      onSnapshot(collection(firebaseRefs.db, 'coupons'), (snap) => setCoupons(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []));
+      onSnapshot(collection(firebaseRefs.db, 'users'), (snap) => setUsersList(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)) : []));
+
+      // LECTURA DE LISTA DE OFERTAS
+      onSnapshot(collection(firebaseRefs.db, 'upsells'), (snap) => {
         setUpsellsList(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []);
       });
 
-      return () => { unsubscribeAuth(); unsubscribeStock(); unsubscribePromos(); unsubscribeHomeSections(); unsubscribeDeptIcons(); unsubscribeCoupons(); unsubscribeUpsells(); window.removeEventListener('focus', handleFocus); window.removeEventListener('pageshow', handleFocus); };
-    }
-  }, [firebaseRefs]);
-
-  useEffect(() => {
-      if (!user || user.isAnonymous || !firebaseRefs.db) return;
-      const unsubscribe = onSnapshot(doc(firebaseRefs.db, 'users', user.uid), (docSnap) => {
-          if (docSnap.exists()) {
-              const data = docSnap.data();
-              setDbUser(data);
-              if(data.name) setClientName(data.name);
-          }
+      onSnapshot(doc(firebaseRefs.db, 'settings', 'departments'), (snap) => {
+        if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
       });
-      return () => unsubscribe();
-  }, [user, firebaseRefs.db]);
-
-  const handleGoogleLogin = async () => {
-      if (!firebaseRefs.auth || !firebaseRefs.db) return;
-      try {
-          const provider = new GoogleAuthProvider();
-          const result = await signInWithPopup(firebaseRefs.auth, provider);
-          const u = result.user;
-          const userRef = doc(firebaseRefs.db, 'users', u.uid);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) {
-              await setDoc(userRef, { name: u.displayName, email: u.email, photoURL: u.photoURL, createdAt: serverTimestamp() });
-          }
-          showToast("¡Sesión iniciada con éxito! 🎉");
-      } catch (error) { console.error(error); showToast("Error al iniciar con Google"); }
-  };
-
-  const handleApplyCoupon = () => {
-      const code = couponInput.trim().toUpperCase();
-      if(!code) return;
-      const found = activeCouponsDb.find(c => c.code === code && c.active);
-      if (found) {
-          setAppliedCoupon(found);
-          showToast(`¡Cupón ${code} aplicado! (-${found.discount}%)`);
-          setCouponInput('');
-      } else {
-          showToast("❌ Cupón inválido o inactivo.");
-          setAppliedCoupon(null);
-      }
-  };
-
-  const showToast = (message) => { setToastMessage(message); setTimeout(() => { setToastMessage(null); }, 3000); };
-  const navigateTo = (view, dept = null) => { setCurrentView(view); if(dept) setActiveFilter({dept, cat: 'all'}); setIsMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  
-  const formatPrice = (n) => n ? n.toLocaleString('es-AR') : '0';
-  const getTotalItems = () => cart.reduce((acc, item) => acc + item.qty, 0);
-  const getUnitPromoPrice = (item) => { const promo = promos.find(p => p.category === item.category); if (promo) { const catCount = cart.filter(i => i.category === item.category).reduce((acc, curr) => acc + curr.qty, 0); if (catCount >= promo.minQty) return promo.totalPrice / promo.minQty; } return item.price; };
-  
-  const calculateTotal = (cartData = cart) => {
-      let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
-      if (appliedCoupon) { return subtotal * (1 - (appliedCoupon.discount / 100)); } 
-      return subtotal;
-  };
-
-  const addToCart = async (product, e) => { 
-    if(e) e.stopPropagation(); 
-    if (product.inStock === false) return; 
-
-    setCart(prev => { 
-        const existing = prev.find(item => item.id === product.id); 
-        if (existing) return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item); 
-        return [...prev, { ...product, qty: 1 }]; 
-    }); 
-    showToast(`✅ Añadido: ${product.name}`); 
-    if(selectedProduct) setSelectedProduct(null); 
-
-    if (firebaseRefs.db) {
-      try { 
-          setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { clicks: increment(1) }, { merge: true }).catch(e => console.error(e)); 
-      } catch (err) { console.error(err); }
-    }
-  };
-  
-  const changeQty = (id, delta) => { setCart(prev => prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)); };
-
-  const handleAddUpsellToCart = (upsell) => {
-      const prod = products.find(p => p.id == upsell.productId);
-      if (!prod) return;
-      setCart(prev => {
-          const existing = prev.find(item => item.id === prod.id);
-          if (existing) return prev.map(item => item.id === prod.id ? { ...item, qty: item.qty + 1, isUpsell: true, upsellPrice: Number(upsell.price) } : item);
-          return [...prev, { ...prod, qty: 1, isUpsell: true, upsellPrice: Number(upsell.price) }];
-      });
-      showToast(`✅ Oferta agregada: ${prod.name}`);
-  };
-
-  const handleCheckout = () => {
-    if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
-    
-    if (deliveryMethod === 'envio') {
-        if (!address.trim() || !zone.trim()) { showToast("⚠️ Completá dirección y localidad."); return; }
-        
-        // LA ÚNICA CONDICIÓN PARA ABRIR EL CARTEL: Envío + Moto + Transferencia
-        if (shippingType === 'moto' && paymentMethod === 'transferencia') {
-            setShowPaymentModal(true);
-            return;
-        }
-    }
-    
-    // Si eligió Retiro Local, Flash, o Moto en Efectivo, pasa por acá abajo:
-    executeOrder();
-  };
-
-  const executeOrder = async () => {
-    setShowPaymentModal(false);
-    setIsSending(true);
-    let currentCart = [...cart];
-    const finalTotal = calculateTotal(currentCart);
-
-    let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n\n`;
-    
-    if (deliveryMethod === 'retiro') {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
-    } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n`;
-    } else if (deliveryMethod === 'envio' && shippingType === 'moto') {
-        if (paymentMethod === 'transferencia') {
-            msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
-        } else {
-            msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido y *pago en efectivo* al recibir:\n\n`;
-        }
-    }
-    
-    msg += `*Resumen:*\n`;
-    currentCart.forEach(i => { 
-        if (i.isUpsell) {
-            msg += `- ${i.qty}x ${i.name} (OFERTA: $${formatPrice(i.upsellPrice)})\n`;
-        } else {
-            msg += `- ${i.qty}x ${i.name} ($${formatPrice(getUnitPromoPrice(i))} c/u)\n`; 
-        }
     });
-    
-    if (appliedCoupon) {
-        msg += `\n🎟️ *CUPÓN:* ${appliedCoupon.code} (-${appliedCoupon.discount}% OFF)\n`;
-    }
+  }, [firebaseRefs]);
+  const updatePrice = async (product, newPrice) => { const price = parseInt(newPrice); if(isNaN(price) || price < 0) return; try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, price: price }, { merge: true }); } catch(err) { alert("Error: " + err.message); } }
+  const updateName = async (product, newName) => { const name = newName.trim().toUpperCase(); if(!name) return; try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, name: name }, { merge: true }); } catch(err) { alert("Error: " + err.message); } }
+  const updateImage = async (product, newImageUrl) => { const url = newImageUrl.trim(); if(!url) return; try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, image: url }, { merge: true }); } catch(err) { alert("Error al actualizar la imagen: " + err.message); } }
+  const updateOrder = async (product, newOrder) => { try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, order: parseInt(newOrder) }, { merge: true }); } catch(err) { alert("Error: " + err.message); } }
+  const updateDescription = async (product, newDesc) => { try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, description: newDesc.trim() }, { merge: true }); } catch(err) { alert("Error: " + err.message); } }
+  const updateCardSize = async (product, newSize) => { try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, cardSize: newSize }, { merge: true }); } catch (err) { alert("Error: " + err.message); } };
+  const updateCategoryDepartment = async (categoryName, newDept) => { const dept = newDept.trim().toUpperCase(); if (!dept) return; try { const prods = products.filter(p => p.category === categoryName); await Promise.all(prods.map(p => setDoc(doc(firebaseRefs.db, 'products', `prod_${p.id}`), { id: p.id, department: dept }, { merge: true }))); } catch (err) { alert("Error: " + err.message); } }
+  const updateProductDepartment = async (product, newDept) => { const dept = newDept.trim().toUpperCase(); if (!dept || dept === product.department) return; try { await setDoc(doc(firebaseRefs.db, 'products', product.dbId || `prod_${product.id}`), { id: product.id, department: dept }, { merge: true }); } catch(err) { alert("Error al actualizar departamento: " + err.message); } };
+  const toggleStock = async (product) => { try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, inStock: product.inStock === false }, { merge: true }); } catch (err) { alert("Error: " + err.message); } };
+  const toggleVisibility = async (product) => { try { await setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { id: product.id, isHidden: !product.isHidden }, { merge: true }); } catch (err) { alert("Error: " + err.message); } };
+  const handleDeleteProduct = async (product) => { if(!confirm(`Eliminar "${product.name}"?`)) return; try { const isHardcoded = initialProducts.some(p => p.id === product.id); const docRef = doc(firebaseRefs.db, 'products', product.dbId || `prod_${product.id}`); if (isHardcoded) { await setDoc(docRef, { isDeleted: true }, { merge: true }); } else { await deleteDoc(docRef); } } catch (err) { alert("Error: " + err.message); } };
 
-    msg += `\n*TOTAL: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
-    
-    if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
-    } else {
-        msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
-        if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
-        
-        if (shippingType === 'flash') {
-            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
-        } else {
-            msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
-            if (paymentMethod === 'transferencia') {
-                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
-                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
-            } else {
-                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
-            }
-        }
-    }
-    
-    const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+  // --- FUNCIONES PARA CREAR Y BORRAR CUPONES ---
+  const handleAddCoupon = async (e) => { 
+    e.preventDefault(); 
+    const codeStr = newCoupon.code.trim().toUpperCase(); 
+    if (!codeStr || !newCoupon.discount) return alert("Faltan datos para el cupón"); 
     try { 
-        if (firebaseRefs.db) { 
-            addDoc(collection(firebaseRefs.db, 'orders'), { 
-                userId: user?.uid || "anon", clientName, clientPhone, 
-                items: currentCart.map(i => ({ name: i.name, qty: i.qty, price: i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i) })), 
-                total: finalTotal, delivery: deliveryMethod, 
-                address: deliveryMethod === 'envio' ? address : '', 
-                zone: deliveryMethod === 'envio' ? zone : '', 
-                aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
-                shippingOption: deliveryMethod === 'envio' ? shippingType : null,
-                paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
-                couponUsed: appliedCoupon ? appliedCoupon.code : null,
-                status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
-                createdAt: serverTimestamp() 
-            }).catch(e => console.error(e)); 
-        } 
-        setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
-    } catch (e) { window.location.href = whatsappUrl; setIsSending(false); }
+      await setDoc(doc(firebaseRefs.db, 'coupons', codeStr), { id: codeStr, code: codeStr, discount: Number(newCoupon.discount), active: true, createdAt: serverTimestamp() }); 
+      setNewCoupon({ code: '', discount: '' }); 
+      alert("¡Cupón guardado con éxito!"); 
+    } catch(err) { alert("Error al guardar cupón: " + err.message); } 
+  };
+  const handleDeleteCoupon = async (id) => { 
+    if(confirm("¿Eliminar cupón definitivamente?")) { 
+      try { await deleteDoc(doc(firebaseRefs.db, 'coupons', id)); } 
+      catch(err) { alert("Error al borrar cupón: " + err.message); } 
+    } 
   };
 
-  const copyAliasToClipboard = () => {
-    navigator.clipboard.writeText(CONFIG.paymentAlias);
-    showToast("✅ ALIAS copiado al portapapeles");
+  // --- FUNCIONES PARA CREAR Y BORRAR OFERTAS (UPSELLS) MULTIPLES ---
+  const handleAddUpsell = async (e) => {
+    e.preventDefault();
+    if (!newUpsell.productId || !newUpsell.price) return;
+    try {
+      await setDoc(doc(firebaseRefs.db, 'upsells', String(newUpsell.productId)), {
+        id: String(newUpsell.productId),
+        productId: Number(newUpsell.productId),
+        price: Number(newUpsell.price),
+        active: true,
+        createdAt: serverTimestamp()
+      });
+      setNewUpsell({ productId: '', price: '' });
+      alert("¡Oferta agregada a la lista!");
+    } catch (err) { alert("Error: " + err.message); }
   };
-  const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
-    const inCart = cart.find(i => i.id === p.id);
-    const isOutOfStock = p.inStock === false;
-    const effectiveSize = isVidriera ? (p.cardSize || 'normal') : 'normal';
 
-    let cardStyle = {}; let sizeClasses = ''; let aspectClass = 'aspect-[4/5]'; let titleClass = 'text-[13px] md:text-[16px] leading-tight'; let priceClass = 'text-xl md:text-2xl';
-
-    if (layout === 'vertical') {
-        if (effectiveSize === 'normal') { sizeClasses = 'flex-grow max-w-full'; cardStyle = { flexBasis: '38%' }; } 
-        else if (effectiveSize === 'medium') { sizeClasses = 'flex-grow max-w-full'; cardStyle = { flexBasis: '58%' }; titleClass = 'text-[15px] md:text-lg leading-tight'; priceClass = 'text-2xl md:text-3xl'; } 
-        else if (effectiveSize === 'large') { sizeClasses = 'w-full'; cardStyle = { flexBasis: '100%' }; aspectClass = 'aspect-[16/9] md:aspect-[21/9]'; titleClass = 'text-xl md:text-3xl leading-tight'; priceClass = 'text-3xl md:text-4xl'; }
-    } else {
-        if (effectiveSize === 'normal') { sizeClasses = 'w-[160px] md:w-[200px] flex-shrink-0'; } 
-        else if (effectiveSize === 'medium') { sizeClasses = 'w-[230px] md:w-[280px] flex-shrink-0'; titleClass = 'text-[15px] md:text-lg leading-tight'; priceClass = 'text-2xl md:text-3xl'; } 
-        else if (effectiveSize === 'large') { sizeClasses = 'w-[320px] md:w-[480px] flex-shrink-0'; aspectClass = 'aspect-[16/9]'; titleClass = 'text-xl md:text-3xl leading-tight'; priceClass = 'text-3xl md:text-4xl'; }
+  const handleDeleteUpsell = async (id) => {
+    if(confirm("¿Eliminar esta oferta?")) {
+      try { await deleteDoc(doc(firebaseRefs.db, 'upsells', id)); }
+      catch (err) { alert(err.message); }
     }
+  };
 
-    return (
-      <div key={p.id} style={{ transitionDelay: `${(index % 4) * 75}ms`, ...cardStyle }} className={`reveal-on-scroll bg-white border border-[#f2f2f2] shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[1.5rem] overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] snap-start group ${isOutOfStock ? 'opacity-70 grayscale' : ''} ${sizeClasses}`}>
-        <div className={`relative ${aspectClass} overflow-hidden bg-[#f2f2f2]/50 cursor-pointer rounded-t-[1.5rem]`} onClick={() => setSelectedProduct(p)}>
-          <img src={p.image} alt={p.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700 ease-out" />
-          {isOutOfStock ? ( <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm flex items-center justify-center"><span className="bg-red-600 text-white font-bebas text-sm px-4 py-1.5 rounded-sm uppercase tracking-wider shadow-lg">SIN STOCK</span></div> ) : p.tag && ( <span className="absolute top-3 left-3 bg-[#111111] text-[#fcdb00] font-bebas text-[11px] px-3 py-1 uppercase rounded-sm shadow-md tracking-wider">{p.tag}</span> )}
-        </div>
-        <div className="p-4 flex-grow flex flex-col"><p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mb-1.5 font-poppins">{p.category}</p><h3 className={`font-bebas ${titleClass} uppercase mb-1 text-[#111111] line-clamp-2 tracking-wide`}>{p.name}</h3>
-          <div className="mt-auto pt-3"><p className={`text-[#fcdb00] font-bebas ${priceClass} mb-4 tracking-wide drop-shadow-sm`}>{CONFIG.currencySymbol}{formatPrice(p.price)}</p>
-            {isOutOfStock ? ( <button disabled className="w-full bg-[#f2f2f2] text-gray-400 py-3 font-bebas text-[14px] uppercase tracking-wider rounded-xl cursor-not-allowed">Agotado</button> ) : inCart ? (
-              <div className="flex items-center justify-between bg-[#fcdb00] text-[#111111] h-11 rounded-xl font-bold px-1.5 shadow-md"><button className="w-12 h-full flex items-center justify-center hover:text-black transition-colors" onClick={() => changeQty(p.id, -1)}><i className="fas fa-minus text-xs"></i></button><span className="font-bebas text-lg pt-1">{inCart.qty}</span><button className="w-12 h-full flex items-center justify-center hover:text-black transition-colors" onClick={() => addToCart(p)}><i className="fas fa-plus text-xs"></i></button></div>
-            ) : ( <button onClick={(e) => addToCart(p, e)} className="w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] py-3 font-bebas text-[16px] uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center justify-center gap-2"><i className="fas fa-shopping-bag text-xs mb-0.5"></i> comprar ahora</button> )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const updateDeptIcon = async (dept, iconId) => {
+    try {
+        await setDoc(doc(firebaseRefs.db, 'settings', 'departments'), { icons: { ...deptIcons, [dept]: iconId } }, { merge: true });
+    } catch(err) { alert("Error al guardar ícono: " + err.message); }
+  };
+  const createHomeSection = async () => { if(!newSectionTitle.trim()) return; try { const newId = `sec_${Date.now()}`; await setDoc(doc(firebaseRefs.db, 'home_sections', newId), { id: newId, title: newSectionTitle.toUpperCase(), icon: newSectionIcon.id, iconColor: newSectionIcon.color, layout: newSectionLayout, productIds: [], order: homeSections.length + 1, createdAt: serverTimestamp() }); setNewSectionTitle(''); } catch(err) { alert("Error al crear sección: " + err.message); } };
+  const deleteHomeSection = async (id) => { if(confirm("¿Borrar?")) { try { await deleteDoc(doc(firebaseRefs.db, 'home_sections', id)); } catch(err) { alert("Error al borrar sección: " + err.message); } } };
+  const addProductToSection = async (sectionId, productId) => { try { const section = homeSections.find(s => s.dbId === sectionId); const current = section.productIds || []; if(current.includes(productId)) return; await setDoc(doc(firebaseRefs.db, 'home_sections', sectionId), { productIds: [...current, productId] }, { merge: true }); } catch(err) { alert("Error al agregar producto: " + err.message); } };
+  const removeProductFromSection = async (sectionId, productId) => { try { const section = homeSections.find(s => s.dbId === sectionId); await setDoc(doc(firebaseRefs.db, 'home_sections', sectionId), { productIds: (section.productIds || []).filter(id => id !== productId) }, { merge: true }); } catch(err) { alert("Error al quitar producto: " + err.message); } };
+  const toggleSectionLayout = async (section) => { try { await setDoc(doc(firebaseRefs.db, 'home_sections', section.dbId), { layout: section.layout === 'vertical' ? 'horizontal' : 'vertical' }, { merge: true }); } catch(err) { alert("Error al cambiar formato: " + err.message); } };
 
-  const renderProductSection = (category) => {
-    let sectionProducts = products.filter(p => p.category === category);
-    if (activeFilter.dept !== 'all') sectionProducts = sectionProducts.filter(p => p.department === activeFilter.dept);
-    if (searchTerm) sectionProducts = sectionProducts.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.category.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (sectionProducts.length === 0) return null;
-    const promo = promos.find(p => p.category === category); let promoText = null;
-    if (promo) promoText = `${promo.minQty}+ un: $${formatPrice(promo.totalPrice / promo.minQty)} c/u`;
+  const autoFillLeastClicked = async (sectionId) => {
+    if(!confirm("¿Autocompletar con los 10 menos clickeados?")) return;
+    try {
+        const available = products.filter(p => p.inStock !== false && !p.isHidden && !p.isDeleted);
+        const sorted = available.sort((a, b) => (a.clicks || 0) - (b.clicks || 0));
+        await setDoc(doc(firebaseRefs.db, 'home_sections', sectionId), { productIds: sorted.slice(0, 10).map(p => p.id) }, { merge: true });
+        alert("¡Sección actualizada con éxito con los menos clickeados! 🚀");
+    } catch(err) { alert("Error al autocompletar: " + err.message); }
+  };
+
+  const handleAddProduct = async (e) => { e.preventDefault(); if (!newProduct.category || !newProduct.department) return alert("Faltan datos"); setIsAdding(true); try { const newId = Date.now(); await setDoc(doc(firebaseRefs.db, 'products', `prod_${newId}`), { id: newId, name: newProduct.name.toUpperCase(), price: Number(newProduct.price), department: newProduct.department.toUpperCase(), category: newProduct.category, image: newProduct.image, tag: newProduct.tag, description: newProduct.description, cardSize: newProduct.cardSize, inStock: true, order: 99, clicks: 0, createdAt: serverTimestamp(), isHidden: false, isDeleted: false }); setNewProduct({ name: '', price: '', department: 'VAPES', category: '', image: '', tag: '', description: '', cardSize: 'normal' }); alert("¡Producto agregado!"); } catch (error) { alert("Error al agregar producto: " + error.message); } setIsAdding(false); };
+  const handleAddPromo = async (e) => { e.preventDefault(); try { const promoId = newPromo.category.toLowerCase().replace(/\s+/g, '-'); await setDoc(doc(firebaseRefs.db, 'promos', promoId), { category: newPromo.category, minQty: Number(newPromo.minQty), totalPrice: Number(newPromo.totalPrice), createdAt: serverTimestamp() }); setNewPromo({ category: '', minQty: 2, totalPrice: '' }); alert("¡Promo guardada!"); } catch(err) { alert("Error al guardar promo: " + err.message); } };
+  const handleDeletePromo = async (id) => { if(confirm("¿Eliminar?")) { try { await deleteDoc(doc(firebaseRefs.db, 'promos', id)); } catch(err) { alert("Error al borrar promo: " + err.message); } } };
+  const handleDeleteCategory = async (categoryName) => { 
+    if(!confirm(`⚠️ ¿ELIMINAR categoría "${categoryName}" y todos sus productos?`)) return; 
+    try { 
+      const productsToDelete = products.filter(p => p.category === categoryName); 
+      for (const p of productsToDelete) { 
+        const isHardcoded = initialProducts.some(initP => initP.id === p.id);
+        const docRef = doc(firebaseRefs.db, 'products', p.dbId || `prod_${p.id}`);
+        if (isHardcoded) { await setDoc(docRef, { isDeleted: true }, { merge: true }); } else { await deleteDoc(docRef); }
+      } 
+      try { await deleteDoc(doc(firebaseRefs.db, 'promos', categoryName.toLowerCase().replace(/\s+/g, '-'))); } catch (e) {} 
+      alert(`Categoría eliminada.`); 
+    } catch (err) { alert("Error al eliminar la categoría: " + err.message); } 
+  };
+
+  const syncAllProducts = async () => { 
+      if (confirm("¿Sincronizar Catálogo y Restaurar Secciones?")) { 
+          setLoading(true); 
+          try { 
+              for (const p of initialProducts) { 
+                  await setDoc(doc(firebaseRefs.db, 'products', `prod_${p.id}`), { id: p.id, name: p.name, department: p.department || "OTROS", category: p.category, image: p.image, description: p.description || "", cardSize: p.cardSize || "normal", order: 99, isHidden: false, isDeleted: false, clicks: 0 }, { merge: true }); 
+              } 
+              for (const sec of initialHomeSections) { 
+                  await setDoc(doc(firebaseRefs.db, 'home_sections', sec.id), { ...sec, createdAt: serverTimestamp() }, { merge: true }); 
+              } 
+              alert("Catálogo sincronizado perfectamente."); 
+          } catch (err) { alert("Error al sincronizar: " + err.message); } 
+          setLoading(false); 
+      } 
+  };
+
+  const deleteOrder = async (id) => { if (confirm("¿Eliminar pedido permanentemente?")) { try { await deleteDoc(doc(firebaseRefs.db, 'orders', id)); } catch (err) { alert("Error: " + err.message); } } };
+  
+  // --- BRANDBOOK COLORS FOR ADMIN ---
+  const theme = {
+    bg: darkMode ? 'bg-[#111111]' : 'bg-[#f2f2f2]',
+    text: darkMode ? 'text-gray-100' : 'text-[#111111]',
+    card: darkMode ? 'bg-[#1a1a1a] border-[#333333]' : 'bg-white border-[#e5e5e5]',
+    cardHover: darkMode ? 'hover:border-[#fcdb00]/40' : 'hover:border-[#fcdb00]',
+    subText: darkMode ? 'text-gray-400' : 'text-gray-500',
+    nav: 'bg-[#111111]',
+    input: darkMode ? 'bg-[#222222] border-[#333333] text-white' : 'bg-[#f2f2f2] border-transparent text-[#111111]',
+    tabActive: 'border-[#fcdb00]',
+    tabActiveText: darkMode ? 'text-[#fcdb00]' : 'text-[#111111]',
+    tabInactive: 'border-transparent text-gray-400',
+    stickyHeader: darkMode ? 'bg-[#111111] border-white/5' : 'bg-white border-[#e5e5e5]'
+  };
+
+  const renderStockGroup = (categoryFilter) => {
+    const group = products.filter(p => p.category === categoryFilter && !p.isDeleted);
+    if (group.length === 0) return null;
+    const currentDept = group[0]?.department || "SIN DEPTO";
     return (
-      <section key={category} id={slugify(category)} className="mb-20 scroll-mt-40 reveal-on-scroll">
-        <div className="flex flex-col md:flex-row justify-between items-baseline mb-8 gap-3 border-b-2 border-[#f2f2f2] pb-4"><h2 className="text-3xl md:text-5xl font-bebas text-[#111111] tracking-wide uppercase relative">{category} <span className="absolute -bottom-[18px] left-0 w-16 h-1 bg-[#fcdb00] rounded-full"></span></h2>{promoText && <div className="bg-[#fcdb00]/20 text-[#111111] px-4 py-2 font-bebas text-lg rounded-full uppercase tracking-wider flex items-center gap-2"><i className="fas fa-tag text-[#fcdb00] mb-0.5"></i> {promoText}</div>}</div>
-        <div className="flex flex-wrap gap-3 md:gap-5">{sectionProducts.map((p, index) => renderProductCard(p, index, false, 'vertical'))}</div>
-      </section>
+        <div className="mb-10" key={categoryFilter}>
+            <div className={`flex flex-col md:flex-row md:justify-between md:items-center gap-3 border-b pb-3 mb-4 ${darkMode ? 'border-[#333333]' : 'border-gray-200'}`}>
+               <div className="flex items-center gap-4">
+                   <h3 className={`text-2xl font-bebas uppercase tracking-wide ${theme.subText}`}>{categoryFilter}</h3>
+                   <div className="flex items-center gap-2 bg-[#fcdb00]/10 px-3 py-1.5 rounded-lg border border-[#fcdb00]/30">
+                       <span className="text-[10px] font-bold uppercase text-[#b8952a] tracking-widest font-poppins">Depto:</span>
+                       <input list="dept-suggestions-stock" defaultValue={currentDept} onBlur={(e) => { if(e.target.value.toUpperCase() !== currentDept.toUpperCase()) { updateCategoryDepartment(categoryFilter, e.target.value); } }} onKeyDown={(e) => { if(e.key === 'Enter') e.target.blur(); }} className={`bg-transparent text-[10px] font-bold uppercase outline-none w-28 md:w-32 border-b border-transparent hover:border-[#fcdb00] focus:border-[#fcdb00] transition-colors font-poppins ${darkMode ? 'text-white' : 'text-[#111111]'}`} placeholder="Escribí..." title="Cambiá el departamento de toda esta categoría" />
+                       <datalist id="dept-suggestions-stock">{availableDepartments.map(d => <option key={d} value={d} />)}</datalist>
+                   </div>
+               </div>
+               <button onClick={() => handleDeleteCategory(categoryFilter)} className="w-fit text-red-500 hover:text-red-700 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase font-poppins"><i className="fas fa-trash"></i> Borrar Categoría</button>
+            </div>
+            <div className="grid gap-4">
+                {group.map(p => (
+                    <div key={p.id} className={`${theme.card} p-5 rounded-[1.5rem] flex justify-between items-start shadow-sm border ${theme.cardHover} transition-all ${p.isHidden ? 'opacity-60 bg-gray-50/50' : ''}`}>
+                        <div className="flex items-start gap-4 w-3/4">
+                            <div className="relative w-16 h-16 flex-shrink-0 mt-1 bg-[#f2f2f2] rounded-xl p-1">
+                                <img src={p.image} className={`w-full h-full object-contain mix-blend-multiply ${(p.inStock === false || p.isHidden) ? 'grayscale opacity-50' : ''}`} alt="" />
+                                {p.inStock === false && !p.isHidden && <div className="absolute inset-0 flex items-center justify-center"><i className="fas fa-times text-red-500 text-lg"></i></div>}
+                                {p.isHidden && <div className="absolute inset-0 flex items-center justify-center"><i className="fas fa-eye-slash text-amber-500 text-lg"></i></div>}
+                            </div>
+                            <div className="flex flex-col gap-1 w-full">
+                                <input type="text" defaultValue={p.name} className={`font-bebas text-xl md:text-2xl tracking-wide uppercase w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#fcdb00] outline-none transition-colors pb-0.5 ${darkMode ? 'text-gray-200' : 'text-[#111111]'}`} onKeyDown={(e) => { if(e.key === 'Enter') { e.target.blur(); } }} onBlur={(e) => { if (e.target.value.toUpperCase() !== p.name.toUpperCase()) { updateName(p, e.target.value); } }} title="Haz clic para editar el nombre" />
+                                <div className="flex items-center gap-2 mt-1">
+                                     <span className="text-gray-400 text-[12px] font-bebas">$</span>
+                                     <input type="number" key={`price-${p.price}`} defaultValue={p.price} className={`w-24 rounded-md px-2 py-1 text-sm font-poppins font-bold focus:ring-1 focus:ring-[#fcdb00] outline-none transition-colors ${theme.input}`} onKeyDown={(e) => { if(e.key === 'Enter') { e.target.blur(); } }} onBlur={(e) => { if (parseInt(e.target.value) !== p.price) updatePrice(p, e.target.value); }} />
+                                     <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-300 dark:border-[#333333]">
+                                        <span className="text-gray-400 text-[10px] font-poppins">Pos:</span>
+                                        <input type="number" key={`order-${p.order}`} defaultValue={p.order || 99} className={`w-12 rounded-md px-1 py-1 text-[10px] font-bold text-center focus:ring-1 focus:ring-[#fcdb00] outline-none transition-colors font-poppins ${theme.input}`} onKeyDown={(e) => { if(e.key === 'Enter') { e.target.blur(); } }} onBlur={(e) => { updateOrder(p, e.target.value); }} title="Posición/Orden" />
+                                     </div>
+                                     <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-300 dark:border-[#333333]">
+                                        <span className="text-gray-400 text-[10px] font-poppins">Tamaño:</span>
+                                        <select value={p.cardSize || 'normal'} onChange={(e) => updateCardSize(p, e.target.value)} className={`rounded-md px-1 py-1 text-[10px] font-bold outline-none cursor-pointer font-poppins ${theme.input}`}>
+                                            <option value="normal">📏 Normal</option><option value="medium">🔲 Mediano</option><option value="large">⬜ Grande</option>
+                                        </select>
+                                     </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className={`w-fit text-[9px] font-bold uppercase px-2 py-0.5 rounded-sm font-poppins ${p.isHidden ? 'bg-amber-100 text-amber-700' : (p.inStock === false ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700')}`}>{p.isHidden ? 'Oculto' : (p.inStock === false ? 'Agotado' : 'Disponible')}</span>
+                                  <input type="text" list="dept-suggestions-stock" defaultValue={p.department || ''} placeholder="SIN DEPTO" onBlur={(e) => updateProductDepartment(p, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} className={`w-24 text-[9px] font-bold uppercase px-2 py-0.5 rounded-sm border font-poppins outline-none focus:border-[#fcdb00] transition-colors ${darkMode ? 'bg-transparent border-[#333333] text-gray-400 focus:text-white' : 'bg-transparent border-gray-300 text-gray-500 focus:text-[#111111]'}`} title="Editar departamento de este producto" />
+                                  <span className={`w-fit text-[9px] font-bold uppercase px-2 py-0.5 rounded-sm border font-poppins flex items-center gap-1 ${darkMode ? 'bg-[#222] border-[#444] text-[#fcdb00]' : 'bg-gray-100 border-gray-200 text-[#b8952a]'}`} title="Cantidad de veces que intentaron añadirlo al carrito"><i className="fas fa-mouse-pointer"></i> Clicks: {p.clicks || 0}</span>
+                                </div>
+                                <textarea defaultValue={p.description || ""} placeholder="Escribe la biografía o descripción del producto aquí..." className={`w-full mt-3 text-[11px] p-3 rounded-xl outline-none transition-colors border focus:border-[#fcdb00] focus:ring-1 focus:ring-[#fcdb00] resize-none font-poppins ${darkMode ? 'bg-[#222222] border-[#333333] text-gray-300 placeholder-gray-500' : 'bg-[#f2f2f2] border-transparent text-gray-600 placeholder-gray-400'}`} rows="2" onBlur={(e) => { if (e.target.value !== (p.description || "")) { updateDescription(p, e.target.value); } }} title="Haz clic para editar la biografía" />
+                                <div className="flex items-center gap-2 mt-2 w-full">
+                                    <i className="fas fa-link text-gray-400 text-[10px]"></i>
+                                    <input type="url" defaultValue={p.image} placeholder="URL de la imagen (Ej: https://i.ibb.co/...)" className={`w-full text-[10px] p-2 rounded-lg outline-none transition-colors border focus:border-[#fcdb00] focus:ring-1 focus:ring-[#fcdb00] font-poppins ${darkMode ? 'bg-[#222222] border-[#333333] text-gray-300 placeholder-gray-500' : 'bg-[#f2f2f2] border-transparent text-gray-600 placeholder-gray-400'}`} onBlur={(e) => { if (e.target.value !== p.image) { updateImage(p, e.target.value); } }} onKeyDown={(e) => { if(e.key === 'Enter') { e.target.blur(); } }} title="Pegá acá el link directo de ImgBB y tocá afuera para guardar" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-col lg:flex-row items-center gap-2 flex-shrink-0 mt-1">
+                             <button onClick={() => toggleStock(p)} className={`w-full lg:w-auto px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase transition-all shadow-sm font-poppins ${p.inStock === false ? 'bg-green-600 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>{p.inStock === false ? 'Habilitar' : 'Agotar'}</button>
+                             <button onClick={() => toggleVisibility(p)} title={p.isHidden ? 'Mostrar en tienda' : 'Ocultar de la tienda'} className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm ${p.isHidden ? 'bg-amber-100 text-amber-600 hover:bg-[#fcdb00] hover:text-[#111111]' : 'bg-gray-200 text-gray-600 hover:bg-[#fcdb00] hover:text-[#111111]'}`}><i className={`fas ${p.isHidden ? 'fa-eye-slash' : 'fa-eye'} text-sm`}></i></button>
+                             <button onClick={() => handleDeleteProduct(p)} title="Eliminar definitivamente" className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-200 hover:bg-red-600 hover:text-white transition-all text-gray-600 shadow-sm"><i className="fas fa-trash text-sm"></i></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
   };
 
-  const renderLegalPage = () => {
-    const pageData = PAGE_CONTENT[currentView]; if (!pageData) return null;
-    return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-w-none font-poppins">{pageData.body}</div></div></div>);
-  };
+  if (loading) return (
+    <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${darkMode ? 'bg-[#111111]' : 'bg-[#f2f2f2]'}`}>
+      <div className="w-12 h-12 border-4 border-[#f2f2f2] border-t-[#fcdb00] rounded-full animate-spin mb-6"></div>
+      <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest font-poppins">Cargando...</p>
+    </div>
+  );
 
   return (
-    <div className="bg-[#f2f2f2] text-[#111111] font-poppins flex flex-col relative pb-20 md:pb-0 min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;700;900&display=swap');
-        .font-bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
-        .font-poppins { font-family: 'Poppins', sans-serif; }
-        .reveal-on-scroll {
-          opacity: 0;
-          transform: translateY(40px);
-          transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
-          will-change: opacity, transform;
-        }
-        .reveal-on-scroll.is-visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        @keyframes marquee {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-50%, 0, 0); }
-        }
-        .animate-marquee {
-          display: flex;
-          width: max-content;
-          animation: marquee 60s linear infinite;
-          will-change: transform;
-        }
-      `}} />
-      {toastMessage && (<div className="fixed top-5 left-1/2 -translate-x-1/2 z-[300] bg-[#111111]/90 backdrop-blur-xl text-white px-6 py-4 rounded-full shadow-[0_20px_40px_rgba(252,219,0,0.2)] border border-[#fcdb00]/30 font-bold text-xs uppercase tracking-widest flex items-center gap-3 animate-in slide-in-from-top-10 fade-in duration-300">{toastMessage}</div>)}
-      
-      {fomoData && (
-        <div className="fixed bottom-24 left-4 md:bottom-8 md:left-8 z-[100] bg-[#111111]/95 backdrop-blur-md text-white p-3 md:p-4 rounded-2xl shadow-2xl border border-[#fcdb00]/30 flex items-center gap-3 animate-in slide-in-from-bottom-10 fade-in duration-500 hover:scale-105 transition-transform cursor-default">
-          <div className="w-10 h-10 bg-[#fcdb00] rounded-full flex items-center justify-center text-[#111111] text-lg shadow-inner"><i className="fas fa-fire"></i></div>
-          <div className="flex flex-col">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-poppins">¡Venta en Vivo!</span>
-            <span className="font-bebas text-lg md:text-xl tracking-wide uppercase leading-none mt-0.5 text-[#fcdb00]"><span className="text-white">{fomoData.name}</span> compró {fomoData.product}</span>
-          </div>
+    <div className={`min-h-screen font-poppins pb-10 transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+      <style dangerouslySetInnerHTML={{__html: `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;700;900&display=swap'); .font-bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; } .font-poppins { font-family: 'Poppins', sans-serif; }`}} />
+      <nav className={`${theme.nav} py-4 px-6 text-white flex justify-between items-center shadow-lg border-b border-white/10 sticky top-0 z-50`}><div className="flex items-center gap-4"><img src={CONFIG.logoImage} alt="Logo" className="h-10 w-auto object-contain" /><h1 className="text-2xl font-bebas tracking-wide uppercase pt-1">028<span className="text-[#fcdb00]">Control</span></h1></div><div className="flex items-center gap-4"><button onClick={() => setDarkMode(!darkMode)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-[#fcdb00] hover:text-[#111111] transition-all text-xs">{darkMode ? '☀️' : '🌙'}</button><a href="/?admin=true" target="_blank" className="text-[11px] text-[#fcdb00] font-bold uppercase hover:text-white transition-all tracking-widest bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">Ver Web</a></div></nav>
+      <div className={`${theme.stickyHeader} border-b sticky top-[72px] z-40 transition-colors duration-300`}>
+        <div className="max-w-4xl mx-auto flex overflow-x-auto no-scrollbar">
+          <button onClick={() => setActiveTab('historial')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'historial' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Historial</button>
+          <button onClick={() => setActiveTab('stock')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'stock' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Stock</button>
+          <button onClick={() => setActiveTab('vidriera')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'vidriera' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Vidriera</button>
+          <button onClick={() => setActiveTab('crear')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'crear' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Crear +</button>
+          <button onClick={() => setActiveTab('clientes')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'clientes' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Clientes</button>
+          <button onClick={() => setActiveTab('promos')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'promos' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Promos %</button>
+          <button onClick={() => setActiveTab('cupones')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'cupones' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Cupones</button>
+          <button onClick={() => setActiveTab('usuarios')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'usuarios' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Usuarios</button>
+          <button onClick={() => setActiveTab('ofertas')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'ofertas' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Ofertas 🔥</button>
         </div>
-      )}
-
-      <header className="bg-[#111111] text-white h-[72px] sticky top-0 z-50 flex items-center justify-between px-4 md:px-8 shadow-lg border-b border-white/5 transition-all duration-300">
-        <button onClick={() => setIsMenuOpen(true)} className="text-2xl hover:text-[#fcdb00] transition-colors p-2"><i className="fas fa-bars"></i></button>
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 cursor-pointer group" onClick={() => {setActiveFilter({dept: 'all', cat: 'all'}); setCurrentView('home'); window.scrollTo(0,0);}}>
-          <img src={CONFIG.logoImage} alt="Logo" className="h-10 w-auto object-contain group-hover:scale-105 transition-transform" />
-        </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          {!user || user.isAnonymous ? (
-            <button onClick={handleGoogleLogin} className="hidden md:flex bg-white/10 hover:bg-white hover:text-[#111111] text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full items-center gap-2 transition-all border border-white/20">
-                <i className="fab fa-google"></i> Iniciar Sesión
-            </button>
-          ) : (
-            <span className="hidden md:flex text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full items-center gap-2 border border-white/10 bg-white/5 text-gray-300">
-                <i className="fas fa-user text-sm text-[#fcdb00]"></i> Hola, {dbUser?.name?.split(' ')[0] || 'Cliente'}
-            </span>
-          )}
-          <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:text-[#fcdb00] transition-colors"><i className="fas fa-shopping-bag text-2xl"></i>{getTotalItems() > 0 && (<span className="absolute top-1.5 -right-1 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg border border-[#111111]">{getTotalItems()}</span>)}</button>
-        </div>
-      </header>
-
-      {currentView === 'home' && (
-        <div className="w-full bg-[#111111] py-2 overflow-hidden m-0 p-0 border-b border-white/10 relative z-30 flex">
-          <div className="animate-marquee whitespace-nowrap flex items-center">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center gap-8 px-4 text-[#fcdb00] font-poppins font-bold text-[10px] md:text-xs tracking-widest uppercase">
-                <span> ENVIOS 24HS CABA/AMBA </span><span className="text-white/30">•</span>
-                 <span> 028 IMPORT </span><span className="text-white/30">•</span>
-                  <span> ATENCION PERSONALIZADA POR WHATSAPP </span><span className="text-white/30">•</span>
-                 <span> PEDIME TE LLEGA EN 30'</span><span className="text-white/30">•</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {isMenuOpen && (<div className="fixed inset-0 z-[90] flex"><div className="absolute inset-0 bg-[#111111]/60 backdrop-blur-md transition-opacity" onClick={() => setIsMenuOpen(false)}></div><div className="w-[85%] max-w-[380px] bg-[#f2f2f2] h-full relative z-10 animate-in slide-in-from-left duration-500 flex flex-col shadow-2xl rounded-r-[2rem] overflow-hidden"><div className="p-8 bg-[#111111] flex justify-between items-center text-white border-b border-white/10"><span className="font-bebas text-3xl tracking-wide uppercase">028<span className="text-[#fcdb00]">MENU</span></span><button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times text-lg"></i></button></div><div className="flex-1 overflow-y-auto pb-8"><div className="flex flex-col p-4 space-y-2">
-        <div className="md:hidden mb-4">
-            {!user || user.isAnonymous ? (
-                <button onClick={handleGoogleLogin} className="w-full bg-[#111111] text-white p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#fcdb00] hover:text-[#111111] transition-all flex justify-center items-center gap-3"><i className="fab fa-google text-lg"></i> Iniciar sesión con Google</button>
-            ) : (
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col items-center gap-3">
-                    <p className="text-[10px] font-bold uppercase text-gray-500 tracking-widest text-center">Hola, {dbUser?.name?.split(' ')[0] || 'Cliente'}</p>
-                </div>
-            )}
-        </div>
-        <button onClick={() => { setActiveFilter({dept:'all', cat:'all'}); navigateTo('catalog'); }} className="text-left p-5 bg-white rounded-2xl shadow-sm border border-[#f2f2f2] font-black uppercase text-sm hover:border-[#fcdb00] hover:shadow-md flex justify-between items-center transition-all">Catálogo Completo <i className="fas fa-arrow-right text-[#fcdb00]"></i></button><div className="pt-6 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Departamentos</p></div>{departments.map(dept => { const isExpanded = expandedDept === dept; const deptCats = Array.from(new Set(products.filter(p => p.department === dept).map(p => p.category))); return (<div key={dept} className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] overflow-hidden transition-all"><button onClick={() => setExpandedDept(isExpanded ? null : dept)} className="w-full text-left p-5 font-black uppercase text-sm flex justify-between items-center transition-colors group">{dept} <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-gray-300 group-hover:text-[#fcdb00] transition-colors`}></i></button><div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}><div className="bg-gray-50 flex flex-col pb-4 pt-2 border-t border-gray-100"><button onClick={() => { setActiveFilter({dept, cat: 'all'}); navigateTo('catalog'); }} className="text-left px-6 py-3 font-black text-xs text-[#111111] uppercase hover:text-[#fcdb00] transition-colors flex items-center gap-2"><i className="fas fa-layer-group text-gray-400"></i> Ver todo en {dept}</button>{deptCats.map(cat => (<button key={cat} onClick={() => { setActiveFilter({dept, cat}); navigateTo('catalog'); setTimeout(() => { const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }, 300); }} className="text-left px-6 py-3 font-bold text-xs text-gray-500 uppercase hover:text-[#111111] transition-colors pl-12 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-gray-300 before:rounded-full before:absolute before:left-7 before:top-1/2 before:-translate-y-1/2 hover:before:bg-[#fcdb00]">{cat}</button>))}</div></div></div>); })}<div className="pt-8 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Información Útil</p></div><div className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] p-2 space-y-1">
-          <button onClick={() => { window.location.href = 'https://028import.com/nosotros'; }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-users"></i></div> Quiénes Somos</button>
-          <button onClick={() => { window.location.href = 'https://028import.com/envios'; }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-truck"></i></div> Envíos y Logística</button>
-          <button onClick={() => {setCurrentView('pagos'); setIsMenuOpen(false); window.scrollTo(0,0);}} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-credit-card"></i></div> Medios de Pago</button>
-          <button onClick={() => {setCurrentView('terminos'); setIsMenuOpen(false); window.scrollTo(0,0);}} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-gray-400"><i className="fas fa-file-contract"></i></div> Legales y Términos</button>
-        </div></div></div></div></div>)}
-
-      {currentView === 'home' ? (
-        <>
-          <header className="relative w-full h-[35vh] md:h-[55vh] flex items-center justify-center bg-[#111111] overflow-hidden border-b border-[#111111]">
-            <img src={CONFIG.bannerImage} alt="Banner 028" className="absolute inset-0 w-full h-full object-cover object-center" />
-          </header>
-          <main className="flex-grow px-4 md:px-8 pt-10 max-w-7xl mx-auto min-h-[50vh] pb-32 w-full">
-            <div className="md:hidden relative mb-12 reveal-on-scroll"><i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i><input type="text" placeholder="Buscar productos, marcas..." value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value); setCurrentView('catalog');}} className="w-full bg-white/70 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] pl-12 pr-6 py-4 rounded-2xl text-sm font-bold outline-none focus:border-[#fcdb00] focus:bg-white transition-all placeholder:text-gray-400 font-poppins" /></div>
-            <div className="mb-16 reveal-on-scroll">
-              <h3 className="font-bebas text-2xl text-[#111111] mb-4 pl-2">Explorar la tienda</h3>
-              <div className="flex overflow-x-auto gap-4 md:gap-6 no-scrollbar pb-6 snap-x mask-image-gradient pr-8">
-                {departments.map(dept => {
-                  const iconId = deptIcons[dept] || 'fa-box';
-                  const iconObj = DEPT_ICONS.find(i => i.id === iconId) || { id: 'fa-box', prefix: 'fas' };
-                  return (
-                  <div key={dept} onClick={() => navigateTo('catalog', dept)} className="snap-start flex-shrink-0 w-32 h-32 md:w-44 md:h-44 bg-white/70 backdrop-blur-xl rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white flex flex-col items-center justify-center gap-4 cursor-pointer hover:scale-105 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:border-[#fcdb00] transition-all duration-500 group">
-                    <div className="w-14 h-14 md:w-16 md:h-16 bg-[#f2f2f2] rounded-full flex items-center justify-center text-[#111111] text-2xl md:text-3xl group-hover:bg-[#fcdb00] transition-colors"><i className={`${iconObj.prefix} ${iconObj.id}`}></i></div>
-                    <span className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-center px-2 text-[#111111] group-hover:text-black transition-colors font-poppins">{dept}</span>
-                  </div>
-                )})}
-              </div>
-            </div>
-             {homeSections.length === 0 ? (<div className="text-center py-20"><div className="w-12 h-12 border-4 border-[#f2f2f2] border-t-[#fcdb00] rounded-full animate-spin mx-auto mb-4"></div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest font-poppins">Preparando vidriera...</p></div>) : (
-                 homeSections.map((sec, sectionIndex) => {
-                     const secProducts = sec.productIds?.map(pid => products.find(p => p.id === pid)).filter(Boolean) || [];
-                     if(secProducts.length === 0) return null;
-                     return (<div key={sec.id} className="mb-20 reveal-on-scroll"><div className="flex justify-between items-end mb-6 pl-2 border-b-2 border-[#f2f2f2] pb-3"><h2 className="text-4xl md:text-6xl font-bebas text-[#111111] tracking-wide uppercase"><i className={`${AVAILABLE_ICONS.find(i => i.id === sec.icon)?.prefix || 'fas'} ${sec.icon || 'fa-star'} ${sec.iconColor || 'text-[#fcdb00]'} mr-3 drop-shadow-sm`}></i>{sec.title}</h2><button onClick={() => navigateTo('catalog')} className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#111111] hover:text-[#fcdb00] transition-colors bg-white/50 px-5 py-2.5 rounded-full border border-white hover:border-[#f2f2f2]">Ver Catálogo <i className="fas fa-arrow-right"></i></button></div>
-                     <div className={sec.layout === 'vertical' ? "flex flex-wrap gap-3 md:gap-5" : "flex overflow-x-auto gap-4 md:gap-6 no-scrollbar pb-8 snap-x mask-image-gradient pr-8"}>{secProducts.map((p, index) => renderProductCard(p, index, true, sec.layout))}</div>
-                     <button onClick={() => navigateTo('catalog')} className="md:hidden w-full mt-2 bg-white/70 backdrop-blur-xl border border-white shadow-sm text-[#111111] py-4 rounded-xl font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform font-poppins">ver todos los modelos <i className="fas fa-arrow-right text-[#fcdb00]"></i></button></div>)
-                 })
-             )}
-          </main>
-        </>
-      ) : currentView === 'catalog' ? (
-        <>
-          <div className="bg-white/80 backdrop-blur-2xl sticky top-[72px] z-40 border-b border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] pt-3 pb-3 transition-all duration-300"><div className="max-w-7xl mx-auto px-4 md:px-8"><div className="flex items-center gap-3 mb-3"><button onClick={() => navigateTo('home')} className="text-gray-400 hover:text-[#111111] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5"><i className="fas fa-home"></i> Inicio</button><span className="text-gray-300 text-[10px]"><i className="fas fa-chevron-right"></i></span><span className="text-[#111111] font-bold uppercase tracking-widest text-[10px]">{activeFilter.dept !== 'all' ? activeFilter.dept : 'CATÁLOGO COMPLETO'}</span></div>{uniqueCategories.length > 0 && (
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2 mask-image-gradient pr-8">
-              <button onClick={() => {setActiveFilter({...activeFilter, cat: 'all'}); window.scrollTo({top: 0, behavior: 'smooth'});}} className={`whitespace-nowrap px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeFilter.cat === 'all' ? 'bg-[#111111] text-[#fcdb00] shadow-md' : 'bg-white border border-[#f2f2f2] text-gray-500 hover:bg-gray-50'}`}>Todos</button>
-              {uniqueCategories.map(cat => (
-                <button key={cat} onClick={() => { setActiveFilter({...activeFilter, cat: cat}); const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }} className={`whitespace-nowrap px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex-shrink-0 ${activeFilter.cat === cat ? 'bg-[#111111] text-[#fcdb00] shadow-md' : 'bg-white border border-[#f2f2f2] text-gray-500 hover:bg-gray-50'}`}>{cat}</button>
-              ))}
-            </div>
-          )}</div></div>
-          <main className="flex-grow px-4 md:px-8 py-10 max-w-7xl mx-auto min-h-[50vh] pb-32 w-full">{searchTerm && products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.category.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (<div className="text-center py-24 bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white shadow-sm"><div className="w-20 h-20 bg-[#f2f2f2] rounded-full flex items-center justify-center mx-auto mb-6"><i className="fas fa-ghost text-3xl text-gray-400"></i></div><h3 className="text-3xl font-bebas uppercase tracking-wide text-[#111111] mb-2">No encontramos nada</h3><p className="text-xs uppercase tracking-widest text-gray-500 font-poppins">Intenta buscar otro sabor o marca.</p></div>)}{uniqueCategories.map(cat => renderProductSection(cat))}</main>
-        </>
-      ) : ( <main className="flex-grow">{renderLegalPage()}</main> )}
-
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#f2f2f2]/90 backdrop-blur-3xl border-t border-white shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40 pb-safe pt-2 px-2"><div className="flex justify-around items-center h-16 max-w-md mx-auto"><button onClick={() => navigateTo('home')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='home' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-home text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Inicio</span></button><button onClick={() => navigateTo('catalog')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='catalog' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-th-large text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Catálogo</span></button><button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center justify-center gap-1 w-full h-full text-[#111111] relative active:scale-95 transition-transform"><div className="relative bg-[#111111] w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"><i className="fas fa-shopping-bag text-lg text-white"></i>{getTotalItems() > 0 && <span className="absolute -top-1.5 -right-1.5 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm border border-[#111111]">{getTotalItems()}</span>}</div><span className="text-[9px] font-bebas uppercase tracking-wider mt-0.5">Bolsa</span></button></div></nav>
-
-      <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-auto relative z-30 rounded-t-[3rem] overflow-hidden"><div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#fcdb00] to-transparent opacity-50"></div><div className="max-w-7xl mx-auto px-8"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16 text-xs md:text-sm"><div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.4)]" /></div><p className="text-gray-400 font-medium leading-relaxed pr-4 font-poppins">Redefinimos la experiencia de compra priorizando tu tiempo y confianza.</p></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Contacto</h4><ul className="space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones y Juramento,<br/>Belgrano, CABA.</span></li></ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Información Legal</h4>
-              <ul className="space-y-4 text-gray-400 font-poppins font-medium">
-                <li><a href="https://028import.com/nosotros" className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Quiénes Somos</a></li>
-                <li><a href="https://028import.com/envios" className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Logística de Envío</a></li>
-                <li><button onClick={() => navigateTo('pagos')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Medios de Pago</button></li>
-                <li><button onClick={() => navigateTo('terminos')} className="hover:text-white transition-colors flex items-center gap-2 mt-4 pt-4 border-t border-white/10"><i className="fas fa-file-contract text-gray-600 text-[10px]"></i> Términos y Condiciones</button></li>
-                <li><button onClick={() => navigateTo('privacidad')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-shield-alt text-gray-600 text-[10px]"></i> Política de Privacidad</button></li>
-              </ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Nuestras Redes</h4><div className="flex gap-4"><a href="https://www.instagram.com/028.import" target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-instagram text-2xl"></i></a><a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#25D366] hover:text-white transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(37,211,102,0.3)]"><i className="fab fa-whatsapp text-2xl"></i></a></div></div></div><div className="flex flex-col md:flex-row justify-between items-center border-t border-white/10 pt-8 text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest text-center md:text-left gap-4 font-poppins"><p>© {new Date().getFullYear()} 028IMPORT. Todos los derechos reservados.</p><div className="flex gap-4"><button onClick={() => navigateTo('arrepentimiento')} className="hover:text-white transition-colors underline underline-offset-4">Botón de Arrepentimiento</button></div></div></div></footer>
-
-      {selectedProduct && (<div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center p-4 sm:p-6"><div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-xl transition-opacity" onClick={() => setSelectedProduct(null)}></div><div className="relative bg-[#f2f2f2] w-full max-w-4xl rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col md:flex-row max-h-[90vh] border border-white/20"><button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/80 backdrop-blur-2xl border border-white text-[#111111] rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors shadow-lg"><i className="fas fa-times text-lg"></i></button><div className="w-full md:w-1/2 bg-white p-8 flex items-center justify-center relative min-h-[350px] border-r border-[#f2f2f2]">{selectedProduct.tag && <span className="absolute top-8 left-8 bg-[#111111] text-[#fcdb00] font-bebas text-sm px-4 py-1.5 uppercase tracking-wider rounded-sm shadow-lg z-10">{selectedProduct.tag}</span>}<img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full max-h-[450px] object-contain drop-shadow-2xl animate-in scale-95 duration-700 ease-out mix-blend-multiply" /></div><div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center overflow-y-auto bg-[#f2f2f2]"><p className="text-[#fcdb00] font-bebas uppercase tracking-wider text-xl mb-1 drop-shadow-sm">{selectedProduct.category}</p><h2 className="text-5xl md:text-6xl font-bebas uppercase tracking-wide text-[#111111] leading-none mb-6">{selectedProduct.name}</h2><p className="text-gray-500 text-sm font-medium mb-8 leading-relaxed whitespace-pre-line font-poppins">{selectedProduct.description || "Experimenta la mejor calidad con nuestra selección de productos premium."}</p><div className="mt-auto border-t border-gray-300 pt-8"><p className="text-[#111111] font-bebas text-5xl md:text-6xl tracking-wide mb-8 drop-shadow-sm">{CONFIG.currencySymbol}{formatPrice(selectedProduct.price)}</p>{selectedProduct.inStock === false ? ( <button disabled className="w-full bg-gray-300 text-gray-500 py-4 text-lg font-bebas uppercase tracking-wider rounded-xl cursor-not-allowed border border-gray-400">Producto Agotado</button> ) : ( <button onClick={(e) => addToCart(selectedProduct, e)} className="w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] py-4 text-xl font-bebas uppercase tracking-wider rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] transition-all duration-300 flex justify-center items-center gap-3 active:scale-95"><i className="fas fa-shopping-cart text-lg mb-0.5"></i> Agregar a la bolsa</button> )}</div></div></div></div>)}
-
-      {isCartOpen && (<div className="fixed inset-0 z-[60] flex flex-col justify-end items-center sm:justify-center p-0 md:p-4"><div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setIsCartOpen(false)} /><div className="relative bg-[#f2f2f2] w-full max-w-lg md:mx-auto rounded-t-[2rem] md:rounded-[2rem] h-[90vh] md:max-h-[85vh] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-white/20 animate-in slide-in-from-bottom duration-500 flex flex-col pb-safe"><div className="p-6 border-b border-gray-300 flex justify-between items-center bg-white sticky top-0 z-10"><div><h2 className="text-4xl font-bebas uppercase tracking-wide text-[#111111] leading-none mb-1">Tu Bolsa</h2><p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest font-poppins">{getTotalItems()} artículos seleccionados</p></div><button onClick={() => setIsCartOpen(false)} className="w-10 h-10 bg-[#f2f2f2] rounded-full text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex items-center justify-center shadow-sm border border-gray-200"><i className="fas fa-times text-lg"></i></button></div><div className="overflow-y-auto p-4 md:p-6 flex-grow no-scrollbar"><div className="space-y-3 mb-10">{cart.length === 0 && (<div className="text-center py-20 bg-white/50 rounded-2xl border border-dashed border-gray-300"><div className="w-16 h-16 bg-[#f2f2f2] rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><i className="fas fa-shopping-bag text-2xl text-gray-400"></i></div><p className="text-gray-400 font-bold text-xs uppercase tracking-widest font-poppins">Tu bolsa está vacía</p></div>)}{cart.map(item => (<div key={item.id} className="flex justify-between items-center bg-[#f9f9f9] p-3 rounded-2xl shadow-[0_4px_15px_rgba(0,0,0,0.02)] border border-gray-200"><div className="flex items-center gap-4"><div className="w-16 h-16 bg-white border border-gray-100 rounded-xl overflow-hidden flex items-center justify-center p-1"><img src={item.image} className="w-full h-full object-contain mix-blend-multiply" alt=""/></div><div className="flex flex-col"><p className="font-bebas text-lg uppercase tracking-wide max-w-[130px] md:max-w-[180px] line-clamp-1 text-[#111111]">{item.name}</p><p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1 bg-white border border-gray-100 w-fit px-2 py-0.5 rounded-md font-poppins">{item.qty} un.</p></div></div><div className="flex items-center gap-4 pr-2"><p className="font-bebas text-[#fcdb00] text-2xl tracking-wide drop-shadow-sm">${formatPrice(item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item)))}</p><div className="flex flex-col items-center gap-1.5 bg-white rounded-md p-1.5 border border-gray-200 shadow-sm"><button onClick={() => changeQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-[#111111] bg-gray-50 rounded-md hover:bg-[#fcdb00] transition-colors"><i className="fas fa-plus text-[10px]"></i></button><button onClick={() => changeQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-[#111111] bg-gray-50 rounded-md hover:bg-[#fcdb00] transition-colors"><i className="fas fa-minus text-[10px]"></i></button></div></div></div>))}
-        
-        {upsellsList.length > 0 && upsellsList.some(u => u.active && !cart.find(c => c.id == u.productId)) && (
-            <div className="mt-8 mb-2 animate-in slide-in-from-bottom duration-500">
-                <p className="font-bebas text-xl mb-3 uppercase tracking-wider text-[#111111] flex items-center gap-2">
-                    <i className="fas fa-fire text-[#fcdb00]"></i> Agregá a tu pedido
-                </p>
-                <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar snap-x mask-image-gradient pr-4">
-                    {upsellsList.filter(u => u.active && !cart.find(c => c.id == u.productId)).map(upsell => {
-                        const prod = products.find(p => p.id == upsell.productId);
-                        if (!prod || prod.inStock === false || prod.isDeleted) return null;
-                        return (
-                            <div key={upsell.id} className="snap-start flex-shrink-0 w-[260px] bg-[#f9f9f9] p-3 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3 relative transition-all hover:border-[#fcdb00]">
-                                <div className="relative w-16 h-16 bg-white border border-gray-100 rounded-xl overflow-hidden flex items-center justify-center p-1 flex-shrink-0">
-                                    <span className="absolute top-0 left-0 bg-[#111111] text-[#fcdb00] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-br-lg shadow-sm z-10 font-poppins">Oferta</span>
-                                    <img src={prod.image} className="w-full h-full object-contain mix-blend-multiply" alt=""/>
-                                </div>
-                                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                    <p className="font-bebas text-sm uppercase truncate text-[#111111] leading-tight">{prod.name}</p>
-                                    <p className="text-[#111111] font-bebas text-xl leading-none mt-1.5 drop-shadow-sm">${formatPrice(upsell.price)} <span className="line-through text-gray-400 text-[10px] font-poppins ml-1">${formatPrice(prod.price)}</span></p>
-                                </div>
-                                <button onClick={() => handleAddUpsellToCart(upsell)} className="w-10 h-10 flex-shrink-0 bg-[#111111] text-[#fcdb00] rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors shadow-md active:scale-90">
-                                    <i className="fas fa-plus text-sm"></i>
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        )}
-        
-        </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-        <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
-            <p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-ticket-alt text-[#fcdb00] text-xl"></i> Descuentos</p>
-            <div className="flex gap-2">
-                <input type="text" placeholder="CÓDIGO INFLUENCER" value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} className="flex-1 p-3 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold uppercase tracking-widest outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400 font-poppins" />
-                <button onClick={handleApplyCoupon} className="bg-[#111111] text-[#fcdb00] px-4 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#fcdb00] hover:text-[#111111] transition-colors shadow-md">Aplicar</button>
-            </div>
-            {appliedCoupon && (
-                <div className="mt-3 flex items-center justify-between bg-green-50 p-2 rounded-lg border border-green-200">
-                    <span className="text-[10px] font-bold text-green-700 uppercase tracking-widest"><i className="fas fa-check-circle mr-1"></i> Cupón {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</span>
-                    <button onClick={() => setAppliedCoupon(null)} className="text-red-500 hover:text-red-700 text-xs"><i className="fas fa-times"></i></button>
-                </div>
-            )}
-        </div>
-        <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
-              {deliveryMethod === 'envio' && (
-                <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 font-poppins">
-                  <div className="flex flex-col gap-3 mb-2">
-                    <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">Elegí tu opción de envío:</label>
-                    <div onClick={() => setShippingType('flash')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'flash' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
-                      <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-bolt text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'flash' ? 'text-[#111111]' : 'text-gray-700'}`}>Envío Flash</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏱️ Te llega en menos de 30 minutos.<br/>💳 Abonando solo por transferencia.</span></div>
-                      {shippingType === 'flash' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
-                    </div>
-                    <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
-                      <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.</span></div>
-                      {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
-                    </div>
-                  </div>
-                  
-                  {shippingType === 'flash' && (
-                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                      <div className="relative">
-                        <i className="fas fa-map-marker-alt absolute left-4 top-1/2 -translate-y-1/2 text-[#fcdb00]"></i>
-                        <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      </div>
-                      <div className="relative">
-                        <i className="fas fa-city absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      </div>
-                    </div>
-                  )}
-
-                  {shippingType === 'moto' && (
-                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                      <CalculadorEnvio 
-                        address={address} setAddress={setAddress}
-                        zone={zone} setZone={setZone}
-                        shippingType={shippingType}
-                      />
-                      <div className="flex flex-col gap-2 mt-2">
-                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cómo querés abonar?</label>
-                        <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
-                          <button onClick={() => setPaymentMethod('transferencia')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'transferencia' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-university"></i> Transferencia
-                          </button>
-                          <button onClick={() => setPaymentMethod('efectivo')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'efectivo' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-money-bill-wave"></i> Efectivo
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="relative mt-1">
-                    <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                  </div>
-
-                </div>
-              )}
-              </div>
-              </div>)}</div>{cart.length > 0 && (<div className="p-6 bg-white border-t border-gray-200 sticky bottom-0 z-20"><div className="flex justify-between items-end mb-4"><span className="font-bold text-gray-500 text-[10px] uppercase tracking-widest font-poppins">Total a Pagar</span><span className="font-bebas text-5xl text-[#111111] tracking-wide leading-none drop-shadow-sm"><span className="text-[#fcdb00] text-3xl mr-1.5">{CONFIG.currencySymbol}</span>{formatPrice(calculateTotal())}</span></div><button onClick={handleCheckout} className={`w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] active:scale-95 font-bebas py-4 rounded-xl uppercase tracking-wider text-xl flex justify-center items-center gap-3 transition-all duration-300`}><i className="fas fa-check-circle text-2xl mb-0.5"></i> Confirmar Pedido</button></div>)}</div></div>)}
-      
-      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] flex flex-col items-end gap-3 group">
-        <div className={`bg-white text-[#111111] p-3 md:p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-200 max-w-[180px] md:max-w-[200px] text-center transform transition-all duration-700 ease-out origin-bottom-right relative ${showTooltip ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100'}`}>
-          <p className="font-poppins font-bold text-[10px] md:text-xs">¿No sabés cuál elegir? Te ayudamos</p>
-          <div className="absolute bottom-[-6px] right-6 w-3 h-3 md:w-4 md:h-4 bg-white transform rotate-45 border-r border-b border-gray-200"></div>
-        </div>
-        <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white text-3xl shadow-[0_10px_30px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform duration-300"><i className="fab fa-whatsapp"></i></a>
       </div>
+      <main className="max-w-4xl mx-auto p-4 md:p-8">
+        
+        {activeTab === 'stock' && (<div className="animate-in fade-in duration-500"><div className="flex justify-between items-center mb-8"><h2 className="text-4xl font-bebas uppercase tracking-wide">Gestión de Stock</h2><button onClick={syncAllProducts} className="text-[10px] bg-[#111111] text-[#fcdb00] px-4 py-2.5 rounded-lg font-bold uppercase tracking-widest shadow-md hover:bg-[#fcdb00] hover:text-[#111111] transition-all">Sincronizar DB</button></div>{uniqueCategories.map(cat => renderStockGroup(cat))}</div>)}
 
-      {/* --- MODAL DE PAGO OFFLINE --- */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowPaymentModal(false)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="bg-[#111111] p-6 text-center relative border-b border-white/10">
-              <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times"></i></button>
-              <div className="w-16 h-16 bg-[#fcdb00] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"><i className="fas fa-university text-3xl text-[#111111]"></i></div>
-              <h2 className="text-3xl font-bebas text-white uppercase tracking-wide">¡Pedido Reservado!</h2>
-              <p className="text-[#fcdb00] text-[11px] font-bold uppercase tracking-widest font-poppins">Falta 1 paso para despacharlo</p>
+        {activeTab === 'vidriera' && (<div className="animate-in fade-in duration-500 max-w-4xl mx-auto">
+          <div className="flex justify-between items-end mb-8"><div><h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Vidriera</h2><p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Armá las secciones del Inicio</p></div></div>
+          
+          <div className={`${theme.card} p-6 rounded-[2rem] mb-8 shadow-sm border`}>
+            <div className="mb-4">
+                <h3 className={`text-2xl font-bebas uppercase tracking-wide ${theme.text}`}>Íconos de Departamentos</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Elegí un ícono para que se vea en el inicio de tus clientes</p>
             </div>
-            <div className="p-6 md:p-8 flex flex-col gap-6">
-              <div className="text-center">
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 font-poppins">Total a transferir</p>
-                <p className="text-5xl font-bebas text-[#111111] leading-none tracking-wide"><span className="text-[#fcdb00] text-3xl mr-1">$</span>{formatPrice(calculateTotal())}</p>
-              </div>
-              <div className="bg-[#f2f2f2] p-5 rounded-2xl border border-gray-200 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#fcdb00]"></div>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 font-poppins"><i className="fas fa-university text-[#fcdb00] mr-1"></i> Transferir al ALIAS:</p>
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                  <span className="font-bebas text-2xl text-[#111111] tracking-wider truncate">{CONFIG.paymentAlias}</span>
-                  <button onClick={copyAliasToClipboard} className="w-10 h-10 bg-[#f2f2f2] rounded-lg flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex-shrink-0"><i className="fas fa-copy"></i></button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {availableDepartments.map(dept => {
+                const currentIconId = deptIcons[dept] || 'fa-box';
+                return (
+                <div key={dept} className={`flex items-center justify-between p-4 border rounded-2xl ${darkMode ? 'bg-[#222] border-[#333]' : 'bg-gray-50 border-gray-200'}`}>
+                   <span className={`font-bold text-[11px] uppercase tracking-widest flex items-center gap-2 ${theme.text}`}>
+                     <i className={`${DEPT_ICONS.find(i => i.id === currentIconId)?.prefix || 'fas'} ${currentIconId} text-[#fcdb00] text-lg w-6`}></i> {dept}
+                   </span>
+                   <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-[160px] mask-image-gradient pr-4">
+                     {DEPT_ICONS.map(icon => (
+                       <button
+                         key={icon.id}
+                         onClick={() => updateDeptIcon(dept, icon.id)}
+                         className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors shadow-sm ${deptIcons[dept] === icon.id ? 'bg-[#111111] text-[#fcdb00] border-2 border-[#fcdb00]' : (darkMode ? 'bg-[#333] text-gray-400 hover:bg-[#444]' : 'bg-white text-gray-400 hover:bg-gray-100 border border-gray-200')}`}
+                       >
+                         <i className={`${icon.prefix} ${icon.id}`}></i>
+                       </button>
+                     ))}
+                   </div>
                 </div>
-              </div>
-              <div className="space-y-3">
-                <button onClick={executeOrder} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500' : 'bg-[#25D366] text-white hover:scale-[1.02] shadow-lg shadow-[#25D366]/30'} py-4 rounded-xl font-bebas text-xl uppercase tracking-wider transition-all flex items-center justify-center gap-3`}>
-                  {isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Enviar Comprobante</>}
-                </button>
-                <p className="text-[9px] text-gray-400 font-medium text-center font-poppins uppercase tracking-widest leading-relaxed">
-                  Realizá la transferencia y envianos la captura por WhatsApp tocando el botón verde.
-                </p>
-              </div>
+              )})}
             </div>
           </div>
-        </div>
-      )}
 
+          <div className={`${theme.card} p-6 rounded-[2rem] mb-8 flex flex-col gap-4 shadow-sm border`}><div className="flex flex-col md:flex-row gap-4 items-end w-full"><div className="flex-1 w-full"><label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Título de la nueva sección</label><input type="text" value={newSectionTitle} onChange={e=>setNewSectionTitle(e.target.value)} placeholder="Ej: Ofertas Relámpago..." className={`w-full mt-2 p-4 rounded-xl outline-none font-bold text-sm focus:ring-2 focus:ring-[#fcdb00] border-transparent ${theme.input}`}/></div><button onClick={createHomeSection} className="w-full md:w-auto bg-[#fcdb00] text-[#111111] font-bebas text-lg uppercase px-8 py-3.5 rounded-xl hover:bg-[#111111] hover:text-[#fcdb00] hover:shadow-xl transition-all">Crear Sección</button></div><div className="mt-2"><label className="text-[10px] font-bold uppercase text-gray-500 mb-3 block tracking-wider">Ícono</label><div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">{AVAILABLE_ICONS.map(iconObj => (<button key={iconObj.id} onClick={() => setNewSectionIcon(iconObj)} className={`w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center text-xl transition-all ${newSectionIcon.id === iconObj.id ? 'bg-[#111111] shadow-md scale-110' : (darkMode ? 'bg-[#222] hover:bg-[#333]' : 'bg-gray-100 hover:bg-gray-200')}`}><i className={`${iconObj.prefix} ${iconObj.id} ${newSectionIcon.id === iconObj.id ? 'text-[#fcdb00]' : 'text-gray-400'}`}></i></button>))}</div></div><div className="mt-2 border-t border-gray-200 dark:border-[#333333] pt-4"><label className="text-[10px] font-bold uppercase text-gray-500 mb-3 block tracking-wider">Formato</label><div className="flex gap-2"><button onClick={() => setNewSectionLayout('horizontal')} className={`flex-1 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${newSectionLayout === 'horizontal' ? 'bg-[#111111] text-[#fcdb00] shadow-md' : (darkMode ? 'bg-[#222] text-gray-400 hover:bg-[#333]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}`}><i className="fas fa-arrows-alt-h mr-2"></i> Carrusel</button><button onClick={() => setNewSectionLayout('vertical')} className={`flex-1 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${newSectionLayout === 'vertical' ? 'bg-[#111111] text-[#fcdb00] shadow-md' : (darkMode ? 'bg-[#222] text-gray-400 hover:bg-[#333]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}`}><i className="fas fa-th-large mr-2"></i> Grilla</button></div></div></div>{homeSections.length === 0 && (<div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-[#333333] rounded-[2rem]"><i className="fas fa-magic text-4xl text-gray-300 mb-4"></i><p className="text-[11px] font-bold uppercase text-gray-500 tracking-widest">No hay secciones.</p></div>)}<div className="space-y-6">{homeSections.map(sec => (<div key={sec.id} className={`${theme.card} p-6 rounded-[2rem] shadow-sm border`}><div className="flex justify-between items-center mb-6 border-b border-gray-200 dark:border-[#333333] pb-4"><h3 className={`text-3xl font-bebas uppercase tracking-wide flex items-center gap-2 ${theme.text}`}><i className={`${AVAILABLE_ICONS.find(i => i.id === sec.icon)?.prefix || 'fas'} ${sec.icon || 'fa-star'} ${sec.iconColor || 'text-[#fcdb00]'}`}></i> {sec.title}</h3><div className="flex items-center gap-2"><button onClick={()=>toggleSectionLayout(sec)} className={`text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-[#333] text-gray-300 hover:text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} title="Cambiar el formato"><i className={`fas ${sec.layout === 'vertical' ? 'fa-th-large' : 'fa-arrows-alt-h'} mr-1.5`}></i> {sec.layout === 'vertical' ? 'Grilla' : 'Carrusel'}</button><button onClick={()=>deleteHomeSection(sec.dbId)} className="text-red-500 hover:text-white hover:bg-red-600 w-9 h-9 rounded-lg flex items-center justify-center transition-all bg-red-50 dark:bg-red-900/20"><i className="fas fa-trash text-sm"></i></button></div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">{sec.productIds?.map(pid => { const prod = products.find(p => p.id === pid && !p.isDeleted); if(!prod) return null; return (<div key={pid} className={`relative rounded-xl p-4 flex flex-col gap-3 border ${darkMode ? 'bg-[#222] border-[#444]' : 'bg-[#f2f2f2] border-transparent shadow-sm'}`}><div className="flex items-center gap-3"><div className="w-12 h-12 bg-white rounded-lg p-1 shadow-sm"><img src={prod.image} className="w-full h-full object-contain mix-blend-multiply" alt=""/></div><div className="flex-1 min-w-0"><p className={`text-[12px] font-bebas text-xl uppercase truncate tracking-wide ${theme.text}`}>{prod.name}</p><p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate mt-0.5">{prod.category}</p></div><button onClick={()=>removeProductFromSection(sec.dbId, pid)} className="w-8 h-8 bg-red-100 text-red-600 rounded-lg text-sm flex items-center justify-center hover:bg-red-600 hover:text-white transition-colors shadow-sm"><i className="fas fa-times"></i></button></div><div className="flex items-center justify-between border-t border-gray-200 dark:border-[#444] pt-3 mt-1"><span className="text-[9px] font-bold uppercase text-gray-500 tracking-widest">Tamaño en Vidriera:</span><select value={prod.cardSize || 'normal'} onChange={(e) => updateCardSize(prod, e.target.value)} className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-md border outline-none cursor-pointer ${darkMode ? 'bg-[#111] border-[#555] text-gray-300 focus:ring-1 focus:ring-[#fcdb00]' : 'bg-white border-gray-300 text-[#111111] focus:ring-1 focus:ring-[#fcdb00]'}`}><option value="normal">📏 Normal</option><option value="medium">🔲 Mediano</option><option value="large">⬜ Grande</option></select></div></div>) })} {(!sec.productIds || sec.productIds.length === 0) && (<p className="text-[11px] font-bold uppercase text-gray-400 italic col-span-full">Aún no agregaste productos a esta sección.</p>)} </div><div className="relative mb-3"><i className="fas fa-plus absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i><select onChange={(e) => { addProductToSection(sec.dbId, parseInt(e.target.value)); e.target.value = ''; }} className={`w-full p-4 pl-12 rounded-xl outline-none font-bold text-xs uppercase cursor-pointer appearance-none tracking-widest focus:ring-2 focus:ring-[#fcdb00] border-transparent ${theme.input}`}><option value="">AGREGAR PRODUCTO A "{sec.title}"...</option>{products.filter(p => !p.isDeleted && !sec.productIds?.includes(p.id)).map(p => (<option key={p.id} value={p.id}>{p.category} - {p.name} (${p.price})</option>))}</select></div><button onClick={() => autoFillLeastClicked(sec.dbId)} className={`w-full py-3.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all flex justify-center items-center gap-2 border ${darkMode ? 'bg-[#222] border-[#fcdb00]/20 text-[#fcdb00] hover:bg-[#fcdb00] hover:text-[#111111]' : 'bg-[#111111] border-transparent text-[#fcdb00] hover:bg-[#fcdb00] hover:text-[#111111]'}`}><i className="fas fa-magic"></i> Autocompletar con los 10 menos clickeados</button></div>))}</div></div>)}
+
+        {activeTab === 'promos' && (<div className="animate-in fade-in duration-500 max-w-lg mx-auto"><div className="flex justify-between items-end mb-8"><div><h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Promociones</h2><p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Descuentos automáticos</p></div></div><form onSubmit={handleAddPromo} className={`${theme.card} p-8 rounded-[2rem] shadow-sm border mb-8 flex flex-col gap-5`}><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Categoría a bonificar</label><input list="promo-category-suggestions" placeholder="Ej: Ignite v400..." value={newPromo.category} onChange={e => setNewPromo({...newPromo, category: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[12px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all uppercase ${theme.input}`} required/><datalist id="promo-category-suggestions">{uniqueCategories.map(cat => <option key={cat} value={cat} />)}</datalist></div><div className="flex gap-4"><div className="flex-1"><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Cantidad Mínima</label><input type="number" required min="2" placeholder="Ej: 2" value={newPromo.minQty} onChange={e => setNewPromo({...newPromo, minQty: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /></div><div className="flex-1"><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Precio Total</label><input type="number" required placeholder="Ej: 49000" value={newPromo.totalPrice} onChange={e => setNewPromo({...newPromo, totalPrice: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /></div></div><p className="text-[11px] text-gray-500">Ejemplo: Llevando 2 o más, quedan a $24.500 c/u automáticamente.</p><button type="submit" className="bg-[#fcdb00] text-[#111111] font-bebas text-xl uppercase py-4 rounded-xl mt-2 hover:bg-[#111111] hover:text-[#fcdb00] shadow-md transition-all">Guardar Promoción</button></form><div className="grid gap-4">{promos.length === 0 ? (<p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest mt-10">No hay promos activas</p>) : (promos.map(promo => (<div key={promo.id} className={`${theme.card} p-6 rounded-[1.5rem] flex justify-between items-center shadow-sm border`}><div><h4 className="font-bebas text-2xl uppercase tracking-wide mb-1">{promo.category}</h4><p className="text-gray-500 text-[11px] font-bold tracking-widest uppercase">Llevando {promo.minQty}+ : ${(promo.totalPrice / promo.minQty).toLocaleString('es-AR')} c/u</p></div><button onClick={() => handleDeletePromo(promo.id)} className="w-12 h-12 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-lg"></i></button></div>)))}</div></div>)}
+
+        {/* --- PESTAÑA: CUPONES --- */}
+        {activeTab === 'cupones' && (
+          <div className="animate-in fade-in duration-500 max-w-lg mx-auto">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Cupones</h2>
+                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Códigos para Influencers</p>
+              </div>
+            </div>
+            <form onSubmit={handleAddCoupon} className={`${theme.card} p-8 rounded-[2rem] shadow-sm border mb-8 flex flex-col gap-5`}>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Código de Descuento</label>
+                <input type="text" required placeholder="Ej: MARTU20" value={newCoupon.code} onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} className={`w-full p-4 rounded-xl outline-none font-bold text-[12px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all uppercase ${theme.input}`} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Porcentaje Off (%)</label>
+                <input type="number" required min="1" max="99" placeholder="Ej: 15" value={newCoupon.discount} onChange={e => setNewCoupon({...newCoupon, discount: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} />
+              </div>
+              <button type="submit" className="bg-[#fcdb00] text-[#111111] font-bebas text-xl uppercase py-4 rounded-xl mt-2 hover:bg-[#111111] hover:text-[#fcdb00] shadow-md transition-all">Crear Cupón</button>
+            </form>
+            <div className="grid gap-4">
+              {coupons.length === 0 ? (
+                <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest mt-10">No hay cupones activos</p>
+              ) : (
+                coupons.map(coupon => (
+                  <div key={coupon.id} className={`${theme.card} p-6 rounded-[1.5rem] flex justify-between items-center shadow-sm border`}>
+                    <div>
+                      <h4 className="font-bebas text-2xl uppercase tracking-wide mb-1">{coupon.code}</h4>
+                      <p className="text-gray-500 text-[11px] font-bold tracking-widest uppercase">¡Aplica {coupon.discount}% al carrito!</p>
+                    </div>
+                    <button onClick={() => handleDeleteCoupon(coupon.id)} className="w-12 h-12 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-lg"></i></button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* --- PESTAÑA: USUARIOS --- */}
+        {activeTab === 'usuarios' && (
+          <div className="animate-in fade-in duration-500">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Usuarios</h2>
+                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Cuentas Registradas con Google</p>
+              </div>
+              <span className="bg-[#fcdb00] text-[#111111] text-[11px] font-bold px-4 py-2 rounded-lg shadow-sm">{usersList.length} Registros</span>
+            </div>
+            {usersList.length === 0 ? (
+              <div className={`${theme.card} p-24 rounded-[3rem] border-2 border-dashed text-center flex flex-col items-center`}>
+                <i className="fab fa-google text-gray-300 text-5xl mb-6"></i>
+                <p className="text-gray-400 font-bold uppercase text-[11px] tracking-widest">Nadie se registró todavía</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {usersList.map((usr, index) => (
+                  <div key={usr.id || index} className={`${theme.card} p-6 rounded-[1.5rem] shadow-sm border flex flex-col gap-4 hover:border-[#fcdb00]/50 transition-all`}>
+                    <div className="flex items-center gap-4">
+                      {usr.photoURL ? (
+                        <img src={usr.photoURL} alt="Perfil" className="w-14 h-14 rounded-full shadow-md object-cover" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-[#111111] text-[#fcdb00] flex items-center justify-center text-2xl font-bebas shadow-md uppercase pt-1">{usr.name ? usr.name.charAt(0) : 'U'}</div>
+                      )}
+                      <div className="overflow-hidden">
+                        <h4 className="font-bebas tracking-wide text-2xl uppercase leading-none mb-1 truncate">{usr.name || 'Sin Nombre'}</h4>
+                        <p className="text-gray-500 font-bold text-[10px] truncate"><i className="fas fa-envelope mr-1.5 text-[#fcdb00]"></i> {usr.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 border-t pt-4 dark:border-[#333333]">
+                      <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">Ruleta: <span className={usr.hasSpunRoulette ? 'text-green-500' : 'text-gray-400'}>{usr.hasSpunRoulette ? 'Ya giró 🎁' : 'No giró'}</span></span>
+                      <span className="text-[9px] font-bold uppercase text-gray-400">{usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleDateString('es-AR') : 'Reciente'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- NUEVA PESTAÑA: OFERTAS (UPSELLS) MULTIPLES --- */}
+        {activeTab === 'ofertas' && (
+          <div className="animate-in fade-in duration-500 max-w-lg mx-auto">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Ofertas Finales (Upsell)</h2>
+                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Productos recomendados antes del pago</p>
+              </div>
+            </div>
+            
+            <form onSubmit={handleAddUpsell} className={`${theme.card} p-8 rounded-[2rem] shadow-sm border mb-8 flex flex-col gap-6`}>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Producto a Ofrecer</label>
+                <select value={newUpsell.productId} onChange={e => setNewUpsell({...newUpsell, productId: e.target.value})} className={`w-full p-4 rounded-xl font-bold text-xs outline-none uppercase appearance-none focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} required>
+                  <option value="">Seleccioná un producto...</option>
+                  {products.filter(p => !p.isDeleted).map(p => (<option key={p.id} value={p.id}>{p.category} - {p.name} (Lista: ${p.price})</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Precio Especial de Oferta</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bebas text-xl text-gray-400">$</span>
+                  <input type="number" step="0.01" required min="0" value={newUpsell.price} onChange={e => setNewUpsell({...newUpsell, price: e.target.value})} placeholder="Ej: 10999" className={`w-full p-4 pl-10 rounded-xl font-black text-lg outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`}/>
+                </div>
+              </div>
+              <button type="submit" className="bg-[#fcdb00] text-[#111111] font-bebas text-2xl uppercase py-4 rounded-xl mt-2 hover:bg-[#111111] hover:text-[#fcdb00] shadow-md transition-all">Agregar Oferta</button>
+            </form>
+
+            <div className="grid gap-4">
+              {upsellsList.length === 0 ? (
+                <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest mt-10">No hay ofertas activas</p>
+              ) : (
+                upsellsList.map(upsell => {
+                  const prod = products.find(p => p.id == upsell.productId);
+                  return (
+                    <div key={upsell.id} className={`${theme.card} p-6 rounded-[1.5rem] flex justify-between items-center shadow-sm border`}>
+                      <div>
+                        <h4 className="font-bebas text-xl uppercase tracking-wide mb-1">{prod?.name || 'Producto Eliminado'}</h4>
+                        <p className="text-red-500 text-[11px] font-bold tracking-widest uppercase">Oferta: ${upsell.price.toLocaleString('es-AR')}</p>
+                      </div>
+                      <button onClick={() => handleDeleteUpsell(upsell.id)} className="w-12 h-12 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-lg"></i></button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'crear' && (<div className="animate-in fade-in duration-500 max-w-lg mx-auto"><h2 className="text-4xl font-bebas uppercase tracking-wide mb-6 text-center">Nuevo Producto</h2><form onSubmit={handleAddProduct} className={`${theme.card} p-8 rounded-[2rem] shadow-sm border flex flex-col gap-5`}><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Nombre del Producto</label><input type="text" required placeholder="Ej: BLUE RAZZ ICE" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /></div><div className="flex gap-4"><div className="flex-1"><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Precio</label><input type="number" required placeholder="26000" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /></div><div className="flex-1"><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Categoría / Marca</label><input list="category-suggestions" placeholder="Ej: Ignite v400 o Crear Nueva..." value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[12px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all uppercase ${theme.input}`} /><datalist id="category-suggestions">{uniqueCategories.map(cat => <option key={cat} value={cat} />)}</datalist></div></div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Departamento Principal</label><input list="dept-suggestions" placeholder="Elegí o escribí uno nuevo..." value={newProduct.department} onChange={e => setNewProduct({...newProduct, department: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[12px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all uppercase ${theme.input}`} /><datalist id="dept-suggestions">{availableDepartments.map(d => <option key={d} value={d} />)}</datalist></div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Link de Imagen (URL)</label><input type="url" required placeholder="https://i.postimg.cc/..." value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[11px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} />{newProduct.image && (<div className="mt-4 relative h-32 rounded-xl overflow-hidden border border-dashed border-gray-300 bg-[#f2f2f2]"><img src={newProduct.image} alt="Vista previa" className="w-full h-full object-contain mix-blend-multiply" /></div>)}</div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Etiqueta y Tamaño</label><div className="flex gap-4"><input type="text" placeholder="Ej: Destacado" value={newProduct.tag} onChange={e => setNewProduct({...newProduct, tag: e.target.value})} className={`flex-1 p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /><select value={newProduct.cardSize} onChange={e => setNewProduct({...newProduct, cardSize: e.target.value})} className={`flex-1 p-4 rounded-xl outline-none font-bold text-xs uppercase cursor-pointer border-transparent focus:ring-2 focus:ring-[#fcdb00] ${theme.input}`}><option value="normal">📏 Tamaño Normal</option><option value="medium">🔲 Tamaño Mediano</option><option value="large">⬜ Tamaño Grande</option></select></div></div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Descripción (Biografía)</label><textarea rows="2" placeholder="Escribe aquí..." value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all resize-none ${theme.input}`}></textarea></div><button type="submit" disabled={isAdding} className="bg-[#fcdb00] text-[#111111] font-bebas text-xl uppercase py-4 rounded-xl mt-2 hover:bg-[#111111] hover:text-[#fcdb00] shadow-md transition-all disabled:opacity-50">{isAdding ? 'Guardando...' : 'Guardar Producto'}</button></form></div>)}
+
+        {activeTab === 'clientes' && (<div className="animate-in fade-in duration-500"><div className="flex justify-between items-end mb-8"><div><h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Tu Base</h2><p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Directorio CRM</p></div><span className="bg-[#fcdb00] text-[#111111] text-[11px] font-bold px-4 py-2 rounded-lg shadow-sm">{clientsList.length} Registros</span></div>{clientsList.length === 0 ? (<div className={`${theme.card} p-24 rounded-[3rem] border-2 border-dashed text-center flex flex-col items-center`}><i className="fas fa-users text-gray-300 text-5xl mb-6"></i><p className="text-gray-400 font-bold uppercase text-[11px] tracking-widest">Aún no hay clientes registrados</p></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{clientsList.map((client, index) => (<div key={index} className={`${theme.card} p-6 rounded-[1.5rem] shadow-sm border flex flex-col gap-4 hover:border-[#fcdb00]/50 transition-all`}><div className="flex items-center gap-4"><div className="w-14 h-14 rounded-full bg-[#111111] text-[#fcdb00] flex items-center justify-center text-2xl font-bebas shadow-md uppercase pt-1">{client.name.charAt(0)}</div><div><h4 className="font-bebas tracking-wide text-2xl uppercase leading-none mb-1">{client.name}</h4><p className="text-gray-500 font-bold text-xs"><i className="fas fa-phone text-[10px] mr-1.5 text-[#fcdb00]"></i> {client.phone}</p></div></div><div className="flex justify-between items-center mt-2 border-t pt-4 dark:border-[#333333]"><span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">{client.orderCount} Pedido{client.orderCount > 1 ? 's' : ''}</span><a href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="bg-[#25D366] text-white text-[11px] font-bold px-5 py-2.5 rounded-lg uppercase tracking-widest flex items-center gap-2 hover:bg-[#1ebe5d] transition-all shadow-md"><i className="fab fa-whatsapp text-sm"></i> Escribir</a></div></div>))}</div>)}</div>)}
+
+        {/* --- PESTAÑA HISTORIAL --- */}
+        {activeTab === 'historial' && (<div className="animate-in fade-in duration-500">
+          <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-[#333333] pb-6">
+            <div>
+              <h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Historial</h2>
+              <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Todas las ventas registradas</p>
+            </div>
+            <span className="bg-[#111111] text-[#fcdb00] text-[11px] font-bold px-4 py-2 rounded-lg shadow-sm tracking-widest">{orders.length} PEDIDOS</span>
+          </div>
+          
+          {orders.length === 0 ? (<div className={`${theme.card} p-24 rounded-[3rem] border-2 border-dashed text-center flex flex-col items-center`}><i className="fas fa-receipt text-gray-300 text-5xl mb-6"></i><p className="text-gray-400 font-bold uppercase text-[11px] tracking-widest">No hay pedidos en el historial</p></div>) : (<div className="grid gap-6">{orders.map((order) => (<div key={order.id} className={`${theme.card} rounded-[2rem] shadow-sm border p-6 md:p-8 hover:shadow-lg transition-all duration-300 ${theme.cardHover}`}><div className="flex justify-between items-start mb-6"><div className="flex items-center gap-4"><div className="bg-[#fcdb00] text-[#111111] w-14 h-14 rounded-2xl flex items-center justify-center font-bebas text-3xl shadow-sm pt-1">{order.items?.reduce((a, b) => a + b.qty, 0)}</div><div><span className="text-[10px] font-bold text-[#b8952a] uppercase tracking-widest block mb-0.5">ID: {order.id.slice(-6).toUpperCase()}</span><p className="text-gray-500 text-[11px] font-bold">{order.createdAt ? order.createdAt.toDate().toLocaleString('es-AR') : 'Procesando...'}</p></div></div><div className="flex gap-2"><button onClick={() => deleteOrder(order.id)} className={`${darkMode ? 'bg-[#333] text-white hover:bg-red-600' : 'bg-gray-100 text-gray-600 hover:bg-red-500 hover:text-white'} w-12 h-12 rounded-xl transition-all flex items-center justify-center shadow-sm`}><i className="fas fa-trash text-lg"></i></button></div></div>{order.clientName && (<div className={`mb-5 pb-5 border-b ${darkMode ? 'border-[#333333]' : 'border-gray-200'} flex items-center gap-4`}><div className="w-10 h-10 bg-[#f2f2f2] rounded-full flex items-center justify-center text-gray-400"><i className="fas fa-user text-lg"></i></div><div><p className="text-[10px] font-bold uppercase text-gray-500 tracking-widest leading-none mb-1">Cliente</p><p className="font-bebas text-xl tracking-wide uppercase text-[#111111] dark:text-white">{order.clientName} <span className="font-poppins font-normal text-sm text-gray-400 ml-2">({order.clientPhone})</span></p></div></div>)}<div className={`space-y-3 mb-6 p-5 rounded-2xl border ${darkMode ? 'bg-[#222] border-[#333333]' : 'bg-[#f2f2f2] border-transparent'}`}>{order.items?.map((item, idx) => (<div key={idx} className="flex justify-between items-center"><span className={`font-bold text-xs uppercase tracking-wide ${darkMode ? 'text-gray-300' : 'text-[#111111]'}`}><span className={`${darkMode ? 'text-[#fcdb00]' : 'text-[#b8952a]'} font-black mr-2 bg-white dark:bg-[#111] px-2 py-0.5 rounded`}>{item.qty}x</span> {item.name}</span><span className="text-gray-500 font-bold text-sm">${item.price?.toLocaleString('es-AR')}</span></div>))}</div>{order.delivery === 'envio' && order.address && (<div className="mb-6 p-5 bg-[#111111] text-white rounded-2xl border-l-8 border-[#fcdb00] shadow-md"><p className="text-[#fcdb00] text-[9px] font-bold uppercase mb-2 tracking-widest"><i className="fas fa-truck mr-1.5"></i> Envío a Domicilio {order.shippingOption === 'flash' ? '🚀 (FLASH)' : order.shippingOption === 'moto' ? '🛵 (MOTO)' : ''}</p><p className="uppercase font-bold text-sm mb-1">{order.address}</p><p className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">{order.zone}</p></div>)}</div>))}</div>)}
+        </div>)}
+      </main>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     </div>
   );

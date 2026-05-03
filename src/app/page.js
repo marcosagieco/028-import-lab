@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- ACÁ PONÉ TU ALIAS REAL
+  paymentAlias: "tu.alias.belo", // <-- TU ALIAS ACÁ
 };
 
 const AVAILABLE_ICONS = [
@@ -103,13 +103,14 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('retiro');
   const [shippingType, setShippingType] = useState('flash'); 
+  const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [address, setAddress] = useState('');
   const [zone, setZone] = useState('');
   const [aptDetails, setAptDetails] = useState(''); 
   const [showTooltip, setShowTooltip] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false); // NUEVO ESTADO PARA EL MODAL DE PAGO
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const [deptIcons, setDeptIcons] = useState({});
   const [user, setUser] = useState(null);
@@ -123,7 +124,6 @@ export default function Home() {
   const [activeCouponsDb, setActiveCouponsDb] = useState([]); 
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-
   const [upsellsList, setUpsellsList] = useState([]);
 
   const departments = useMemo(() => [...new Set(products.map(p => p.department).filter(Boolean))], [products]);
@@ -209,7 +209,6 @@ export default function Home() {
         if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
       });
       const unsubscribeCoupons = onSnapshot(collection(firebaseRefs.db, 'coupons'), (snap) => setActiveCouponsDb(!snap.empty ? snap.docs.map(d => d.data()) : []));
-      
       const unsubscribeUpsells = onSnapshot(collection(firebaseRefs.db, 'upsells'), (snap) => {
         setUpsellsList(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []);
       });
@@ -306,20 +305,42 @@ export default function Home() {
 
   const handleCheckout = () => {
     if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
-    if (deliveryMethod === 'envio' && (!address.trim() || !zone.trim())) { showToast("⚠️ Completá dirección y localidad."); return; }
     
-    // EN VEZ DE MANDAR A WHATSAPP DE UNA, ABRIMOS EL MODAL DE PAGO OFFLINE
-    setShowPaymentModal(true);
+    if (deliveryMethod === 'envio') {
+        if (!address.trim() || !zone.trim()) { showToast("⚠️ Completá dirección y localidad."); return; }
+        
+        // LA ÚNICA CONDICIÓN PARA ABRIR EL CARTEL: Envío + Moto + Transferencia
+        if (shippingType === 'moto' && paymentMethod === 'transferencia') {
+            setShowPaymentModal(true);
+            return;
+        }
+    }
+    
+    // Si eligió Retiro Local, Flash, o Moto en Efectivo, pasa por acá abajo:
+    executeOrder();
   };
 
   const executeOrder = async () => {
     setShowPaymentModal(false);
     setIsSending(true);
     let currentCart = [...cart];
-    
     const finalTotal = calculateTotal(currentCart);
-    let msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
+
+    let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n\n`;
     
+    if (deliveryMethod === 'retiro') {
+        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
+    } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
+        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n`;
+    } else if (deliveryMethod === 'envio' && shippingType === 'moto') {
+        if (paymentMethod === 'transferencia') {
+            msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
+        } else {
+            msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido y *pago en efectivo* al recibir:\n\n`;
+        }
+    }
+    
+    msg += `*Resumen:*\n`;
     currentCart.forEach(i => { 
         if (i.isUpsell) {
             msg += `- ${i.qty}x ${i.name} (OFERTA: $${formatPrice(i.upsellPrice)})\n`;
@@ -329,20 +350,29 @@ export default function Home() {
     });
     
     if (appliedCoupon) {
-        msg += `\n🎟️ *CUPÓN APLICADO:* ${appliedCoupon.code} (-${appliedCoupon.discount}% OFF)\n`;
+        msg += `\n🎟️ *CUPÓN:* ${appliedCoupon.code} (-${appliedCoupon.discount}% OFF)\n`;
     }
 
-    msg += `\n*TOTAL PAGADO: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
-    msg += `🏦 *Acreditado al Alias:* ${CONFIG.paymentAlias}\n\n`;
+    msg += `\n*TOTAL: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
-    if (deliveryMethod === 'envio') {
-        msg += `*ENVÍO:* ${address}, ${zone}\n`;
+    if (deliveryMethod === 'retiro') {
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
+    } else {
+        msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
-        if (shippingType === 'flash') msg += `*TIPO DE ENVÍO:* 🚀 Flash (Menos de 30 mins)`;
-        else msg += `*TIPO DE ENVÍO:* 🛵 Motomensajería`;
-    } else { msg += `*RETIRO LOCAL*`; }
-
-    msg += `\n\nAdjunto mi comprobante de pago a continuación 👇`;
+        
+        if (shippingType === 'flash') {
+            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
+        } else {
+            msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
+            if (paymentMethod === 'transferencia') {
+                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
+            } else {
+                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
+            }
+        }
+    }
     
     const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
     try { 
@@ -350,11 +380,15 @@ export default function Home() {
             addDoc(collection(firebaseRefs.db, 'orders'), { 
                 userId: user?.uid || "anon", clientName, clientPhone, 
                 items: currentCart.map(i => ({ name: i.name, qty: i.qty, price: i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i) })), 
-                total: finalTotal, delivery: deliveryMethod, address, zone, 
-                aptDetails: aptDetails.trim(), 
+                total: finalTotal, delivery: deliveryMethod, 
+                address: deliveryMethod === 'envio' ? address : '', 
+                zone: deliveryMethod === 'envio' ? zone : '', 
+                aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
                 shippingOption: deliveryMethod === 'envio' ? shippingType : null,
+                paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
                 couponUsed: appliedCoupon ? appliedCoupon.code : null,
-                status: 'pending_verification', createdAt: serverTimestamp() 
+                status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
+                createdAt: serverTimestamp() 
             }).catch(e => console.error(e)); 
         } 
         setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
@@ -365,7 +399,6 @@ export default function Home() {
     navigator.clipboard.writeText(CONFIG.paymentAlias);
     showToast("✅ ALIAS copiado al portapapeles");
   };
-
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
     const inCart = cart.find(i => i.id === p.id);
     const isOutOfStock = p.inStock === false;
@@ -478,7 +511,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* --- MARQUEE --- */}
       {currentView === 'home' && (
         <div className="w-full bg-[#111111] py-2 overflow-hidden m-0 p-0 border-b border-white/10 relative z-30 flex">
           <div className="animate-marquee whitespace-nowrap flex items-center">
@@ -627,29 +659,50 @@ export default function Home() {
                     </div>
                     <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
                       <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.<br/>💵 Efectivo y transf. contra entrega.</span></div>
+                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.</span></div>
                       {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                   </div>
                   
-                  {/* SI ES FLASH: CAMPOS NORMALES */}
                   {shippingType === 'flash' && (
                     <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                      <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                      <div className="relative">
+                        <i className="fas fa-map-marker-alt absolute left-4 top-1/2 -translate-y-1/2 text-[#fcdb00]"></i>
+                        <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                      </div>
+                      <div className="relative">
+                        <i className="fas fa-city absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                      </div>
                     </div>
                   )}
 
-                  {/* SI ES MOTO: CALCULADOR INTELIGENTE */}
                   {shippingType === 'moto' && (
-                    <CalculadorEnvio 
-                      address={address} setAddress={setAddress}
-                      zone={zone} setZone={setZone}
-                      shippingType={shippingType}
-                    />
+                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+                      <CalculadorEnvio 
+                        address={address} setAddress={setAddress}
+                        zone={zone} setZone={setZone}
+                        shippingType={shippingType}
+                      />
+                      <div className="flex flex-col gap-2 mt-2">
+                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cómo querés abonar?</label>
+                        <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
+                          <button onClick={() => setPaymentMethod('transferencia')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'transferencia' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-university"></i> Transferencia
+                          </button>
+                          <button onClick={() => setPaymentMethod('efectivo')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'efectivo' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-money-bill-wave"></i> Efectivo
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   
-                  <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                  <div className="relative mt-1">
+                    <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                  </div>
+
                 </div>
               )}
               </div>
@@ -668,20 +721,17 @@ export default function Home() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowPaymentModal(false)}></div>
           <div className="relative bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            
             <div className="bg-[#111111] p-6 text-center relative border-b border-white/10">
               <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times"></i></button>
-              <div className="w-16 h-16 bg-[#fcdb00] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"><i className="fas fa-wallet text-3xl text-[#111111]"></i></div>
+              <div className="w-16 h-16 bg-[#fcdb00] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"><i className="fas fa-university text-3xl text-[#111111]"></i></div>
               <h2 className="text-3xl font-bebas text-white uppercase tracking-wide">¡Pedido Reservado!</h2>
               <p className="text-[#fcdb00] text-[11px] font-bold uppercase tracking-widest font-poppins">Falta 1 paso para despacharlo</p>
             </div>
-
             <div className="p-6 md:p-8 flex flex-col gap-6">
               <div className="text-center">
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 font-poppins">Total a transferir</p>
                 <p className="text-5xl font-bebas text-[#111111] leading-none tracking-wide"><span className="text-[#fcdb00] text-3xl mr-1">$</span>{formatPrice(calculateTotal())}</p>
               </div>
-
               <div className="bg-[#f2f2f2] p-5 rounded-2xl border border-gray-200 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#fcdb00]"></div>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 font-poppins"><i className="fas fa-university text-[#fcdb00] mr-1"></i> Transferir al ALIAS:</p>
@@ -690,13 +740,12 @@ export default function Home() {
                   <button onClick={copyAliasToClipboard} className="w-10 h-10 bg-[#f2f2f2] rounded-lg flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex-shrink-0"><i className="fas fa-copy"></i></button>
                 </div>
               </div>
-
               <div className="space-y-3">
                 <button onClick={executeOrder} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500' : 'bg-[#25D366] text-white hover:scale-[1.02] shadow-lg shadow-[#25D366]/30'} py-4 rounded-xl font-bebas text-xl uppercase tracking-wider transition-all flex items-center justify-center gap-3`}>
                   {isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Enviar Comprobante</>}
                 </button>
                 <p className="text-[9px] text-gray-400 font-medium text-center font-poppins uppercase tracking-widest leading-relaxed">
-                  Realizá la transferencia desde tu app bancaria y envianos la captura por WhatsApp tocando el botón verde.
+                  Realizá la transferencia y envianos la captura por WhatsApp tocando el botón verde.
                 </p>
               </div>
             </div>
