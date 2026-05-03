@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- ASEGURATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
 };
 
 const AVAILABLE_ICONS = [
@@ -103,6 +103,7 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('retiro');
   const [shippingType, setShippingType] = useState('flash'); 
+  const [paymentMethod, setPaymentMethod] = useState('transferencia'); // EL NUEVO ESTADO DE PAGO
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -304,17 +305,12 @@ export default function Home() {
       showToast(`✅ Oferta agregada: ${prod.name}`);
   };
 
-  // -------------------------------------------------------------
-  // LÓGICA REFORZADA DEL BOTÓN DE CONFIRMAR PEDIDO
-  // -------------------------------------------------------------
   const handleCheckout = () => {
-    // 1. Verificamos que llenó todos los datos
     if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
     if (deliveryMethod === 'envio' && (!address.trim() || !zone.trim())) { showToast("⚠️ Completá dirección y localidad."); return; }
     
-    // 2. Si eligió envío Y ADEMÁS eligió motomensajería, abrimos el Modal.
-    // En cualquier otro caso (Retiro o Flash), procesamos la orden directo al WhatsApp.
-    if (deliveryMethod === 'envio' && shippingType === 'moto') {
+    // Si elige envío + moto + transferencia -> Mostramos el Modal del ALIAS.
+    if (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') {
         setShowPaymentModal(true);
     } else {
         executeOrder(); 
@@ -330,13 +326,18 @@ export default function Home() {
     let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n\n`;
     
     if (deliveryMethod === 'envio' && shippingType === 'moto') {
-        msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
+        if (paymentMethod === 'transferencia') {
+            msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
+        } else {
+            msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido y *pago en efectivo* al recibir:\n\n`;
+        }
     } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n*Pedido:* \n`;
+        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n`;
     } else {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n*Pedido:* \n`;
+        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
     }
     
+    msg += `*Resumen:*\n`;
     currentCart.forEach(i => { 
         if (i.isUpsell) {
             msg += `- ${i.qty}x ${i.name} (OFERTA: $${formatPrice(i.upsellPrice)})\n`;
@@ -354,14 +355,20 @@ export default function Home() {
     if (deliveryMethod === 'envio') {
         msg += `*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
-        if (shippingType === 'flash') msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)`;
+        if (shippingType === 'flash') msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
         else {
             msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
-            msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+            if (paymentMethod === 'transferencia') {
+                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+            } else {
+                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
+            }
         }
+    } else {
+        msg += `*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
     }
 
-    if (deliveryMethod === 'envio' && shippingType === 'moto') {
+    if (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') {
         msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
     }
     
@@ -374,8 +381,9 @@ export default function Home() {
                 total: finalTotal, delivery: deliveryMethod, address, zone, 
                 aptDetails: aptDetails.trim(), 
                 shippingOption: deliveryMethod === 'envio' ? shippingType : null,
+                paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
                 couponUsed: appliedCoupon ? appliedCoupon.code : null,
-                status: (deliveryMethod === 'envio' && shippingType === 'moto') ? 'pending_verification' : 'pending', 
+                status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
                 createdAt: serverTimestamp() 
             }).catch(e => console.error(e)); 
         } 
@@ -441,7 +449,6 @@ export default function Home() {
     const pageData = PAGE_CONTENT[currentView]; if (!pageData) return null;
     return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-w-none font-poppins">{pageData.body}</div></div></div>);
   };
-
   return (
     <div className="bg-[#f2f2f2] text-[#111111] font-poppins flex flex-col relative pb-20 md:pb-0 min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
       <style dangerouslySetInnerHTML={{__html: `
@@ -648,7 +655,7 @@ export default function Home() {
                     </div>
                     <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
                       <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.<br/>💵 Efectivo y transf. contra entrega.</span></div>
+                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.</span></div>
                       {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                   </div>
@@ -667,14 +674,27 @@ export default function Home() {
                   )}
 
                   {shippingType === 'moto' && (
-                    <CalculadorEnvio 
-                      address={address} setAddress={setAddress}
-                      zone={zone} setZone={setZone}
-                      shippingType={shippingType}
-                    />
+                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+                      <CalculadorEnvio 
+                        address={address} setAddress={setAddress}
+                        zone={zone} setZone={setZone}
+                        shippingType={shippingType}
+                      />
+                      <div className="flex flex-col gap-2 mt-2">
+                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cómo querés abonar?</label>
+                        <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
+                          <button onClick={() => setPaymentMethod('transferencia')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'transferencia' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-university"></i> Transferencia
+                          </button>
+                          <button onClick={() => setPaymentMethod('efectivo')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'efectivo' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-money-bill-wave"></i> Efectivo
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   
-                  <div className="relative">
+                  <div className="relative mt-1">
                     <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
                   </div>
