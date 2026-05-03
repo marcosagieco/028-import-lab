@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- TU ALIAS ACÁ
+  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
 };
 
 const AVAILABLE_ICONS = [
@@ -104,6 +104,7 @@ export default function Home() {
   const [deliveryMethod, setDeliveryMethod] = useState('retiro');
   const [shippingType, setShippingType] = useState('flash'); 
   const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
+  const [shippingCost, setShippingCost] = useState(0); 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -267,8 +268,9 @@ export default function Home() {
   
   const calculateTotal = (cartData = cart) => {
       let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
-      if (appliedCoupon) { return subtotal * (1 - (appliedCoupon.discount / 100)); } 
-      return subtotal;
+      if (appliedCoupon) { subtotal = subtotal * (1 - (appliedCoupon.discount / 100)); } 
+      let envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
+      return subtotal + envio;
   };
 
   const addToCart = async (product, e) => { 
@@ -309,14 +311,12 @@ export default function Home() {
     if (deliveryMethod === 'envio') {
         if (!address.trim() || !zone.trim()) { showToast("⚠️ Completá dirección y localidad."); return; }
         
-        // LA ÚNICA CONDICIÓN PARA ABRIR EL CARTEL: Envío + Moto + Transferencia
         if (shippingType === 'moto' && paymentMethod === 'transferencia') {
             setShowPaymentModal(true);
             return;
         }
     }
     
-    // Si eligió Retiro Local, Flash, o Moto en Efectivo, pasa por acá abajo:
     executeOrder();
   };
 
@@ -340,20 +340,29 @@ export default function Home() {
         }
     }
     
-    msg += `*Resumen:*\n`;
+    msg += `*Resumen de Productos:*\n`;
+    let subtotalCalc = 0;
     currentCart.forEach(i => { 
-        if (i.isUpsell) {
-            msg += `- ${i.qty}x ${i.name} (OFERTA: $${formatPrice(i.upsellPrice)})\n`;
-        } else {
-            msg += `- ${i.qty}x ${i.name} ($${formatPrice(getUnitPromoPrice(i))} c/u)\n`; 
-        }
+        const price = i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i);
+        subtotalCalc += (i.qty * price);
+        if (i.isUpsell) { msg += `- ${i.qty}x ${i.name} (OFERTA: $${formatPrice(price)})\n`; } 
+        else { msg += `- ${i.qty}x ${i.name} ($${formatPrice(price)} c/u)\n`; }
     });
     
+    let subtotalFinal = subtotalCalc;
     if (appliedCoupon) {
+        subtotalFinal = subtotalCalc * (1 - (appliedCoupon.discount / 100));
         msg += `\n🎟️ *CUPÓN:* ${appliedCoupon.code} (-${appliedCoupon.discount}% OFF)\n`;
     }
 
-    msg += `\n*TOTAL: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
+    msg += `\n*Subtotal:* ${CONFIG.currencySymbol}${formatPrice(subtotalFinal)}`;
+    
+    let costoEnvioAgregado = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
+    if (costoEnvioAgregado > 0) {
+        msg += `\n*Costo de Envío (Moto):* ${CONFIG.currencySymbol}${formatPrice(costoEnvioAgregado)}`;
+    }
+    
+    msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
         msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
@@ -386,6 +395,7 @@ export default function Home() {
                 aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
                 shippingOption: deliveryMethod === 'envio' ? shippingType : null,
                 paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
+                shippingCost: costoEnvioAgregado,
                 couponUsed: appliedCoupon ? appliedCoupon.code : null,
                 status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
                 createdAt: serverTimestamp() 
@@ -399,6 +409,7 @@ export default function Home() {
     navigator.clipboard.writeText(CONFIG.paymentAlias);
     showToast("✅ ALIAS copiado al portapapeles");
   };
+
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
     const inCart = cart.find(i => i.id === p.id);
     const isOutOfStock = p.inStock === false;
@@ -683,6 +694,7 @@ export default function Home() {
                         address={address} setAddress={setAddress}
                         zone={zone} setZone={setZone}
                         shippingType={shippingType}
+                        setShippingCost={setShippingCost}
                       />
                       <div className="flex flex-col gap-2 mt-2">
                         <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cómo querés abonar?</label>

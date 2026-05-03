@@ -12,7 +12,8 @@ const mapContainerStyle = {
 
 const centerLocal = { lat: -34.5562, lng: -58.4445 };
 
-export default function CalculadorEnvio({ address, setAddress, zone, setZone, shippingType }) {
+// Fijate que acá agregué "setShippingCost" para comunicarnos con la bolsa
+export default function CalculadorEnvio({ address, setAddress, zone, setZone, shippingType, setShippingCost }) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     libraries: libraries,
@@ -34,12 +35,10 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
       const lng = place.geometry.location.lng();
       const destinoCoords = { lat, lng };
       
-      // 1. Guardamos la dirección en el carrito principal
       if (setAddress) setAddress(place.formatted_address);
 
-      // 2. Extraemos el barrio para que el carrito no tire el error amarillo
       const components = place.address_components;
-      let barrio = "CABA/GBA"; // Por defecto por si Google se pone quisquilloso
+      let barrio = "CABA/GBA";
       if (components) {
         const subLocality = components.find(c => c.types.includes("sublocality_level_1") || c.types.includes("neighborhood"));
         const locality = components.find(c => c.types.includes("locality"));
@@ -48,7 +47,6 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
       }
       if (setZone) setZone(barrio);
 
-      // 3. Calculamos el costo de la moto
       if (shippingType === 'moto') {
         const service = new window.google.maps.DistanceMatrixService();
         service.getDistanceMatrix(
@@ -62,10 +60,16 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
               const distanciaKm = response.rows[0].elements[0].distance.value / 1000;
               let precioPorKm = 1000;
               if (distanciaKm >= 11) precioPorKm = 900;
-              const costoTotal = Math.round(distanciaKm * precioPorKm);
+              
+              // MAGIA DEL REDONDEO: Calcula el precio exacto y lo redondea a la centena más cercana hacia arriba
+              const costoTotalExacto = distanciaKm * precioPorKm;
+              const costoTotalRedondeado = Math.ceil(costoTotalExacto / 100) * 100;
               
               setMarkerPos(destinoCoords);
-              setDatosEnvio({ km: distanciaKm.toFixed(1), precio: costoTotal });
+              setDatosEnvio({ km: distanciaKm.toFixed(1), precio: costoTotalRedondeado });
+              
+              // Le mandamos el precio a la bolsa de compras
+              if (setShippingCost) setShippingCost(costoTotalRedondeado);
 
               if (map) {
                 const bounds = new window.google.maps.LatLngBounds();
@@ -90,7 +94,6 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
 
   return (
     <div className="flex flex-col gap-4">
-      {/* INPUT DE DIRECCIÓN CON AUTOCOMPLETE */}
       <Autocomplete
         onLoad={onLoad}
         onPlaceChanged={onPlaceChanged}
@@ -102,13 +105,16 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
             type="text"
             placeholder="Dirección completa (Calle y altura)"
             defaultValue={address}
-            onChange={(e) => setAddress && setAddress(e.target.value)}
+            onChange={(e) => {
+              if (setAddress) setAddress(e.target.value);
+              // Si borran la dirección, ponemos el costo en 0
+              if (e.target.value === '' && setShippingCost) setShippingCost(0);
+            }}
             className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400"
           />
         </div>
       </Autocomplete>
 
-      {/* INPUT DE BARRIO (SE AUTO-LLENA) */}
       <div className="relative">
         <i className="fas fa-city absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
         <input
@@ -120,8 +126,7 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
         />
       </div>
 
-      {/* RESULTADO Y MAPA - SOLO PARA MOTO */}
-      {shippingType === 'moto' && address && address.length > 5 && (
+      {shippingType === 'moto' && address && address.length > 5 && datosEnvio && (
         <div className="animate-in fade-in zoom-in-95 duration-500">
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
@@ -138,21 +143,19 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
             {markerPos && <Marker position={markerPos} />}
           </GoogleMap>
 
-          {datosEnvio && (
-            <div className="mt-4 p-4 bg-[#fcdb00]/10 border border-[#fcdb00] rounded-xl flex justify-between items-center shadow-sm">
-              <div>
-                <p className="text-[9px] font-black uppercase text-gray-500 tracking-widest mb-1">
-                  <i className="fas fa-route mr-1"></i> Recorrido: {datosEnvio.km} km
-                </p>
-                <p className="font-bebas text-2xl text-[#111111] leading-none">
+          <div className="mt-4 p-4 bg-[#fcdb00]/10 border border-[#fcdb00] rounded-xl flex justify-between items-center shadow-sm">
+            <div>
+              <p className="text-[9px] font-black uppercase text-gray-500 tracking-widest mb-1">
+                <i className="fas fa-route mr-1"></i> Recorrido: {datosEnvio.km} km
+              </p>
+              <p className="font-bebas text-2xl text-[#111111] leading-none">
                 Costo de Envío: ${datosEnvio.precio.toLocaleString("es-AR")}
               </p>
-              </div>
-              <div className="w-8 h-8 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] text-xs">
-                <i className="fas fa-check"></i>
-              </div>
             </div>
-          )}
+            <div className="w-8 h-8 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] text-xs">
+              <i className="fas fa-check"></i>
+            </div>
+          </div>
         </div>
       )}
     </div>
