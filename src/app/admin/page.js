@@ -309,32 +309,34 @@ export default function Home() {
     if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
     if (deliveryMethod === 'envio' && (!address.trim() || !zone.trim())) { showToast("⚠️ Completá dirección y localidad."); return; }
     
-    // Si elige envío + moto + transferencia -> Mostramos el Modal del ALIAS.
+    // MAGIA ACÁ: Solo mostramos Modal si es Envío -> Moto -> Transferencia
     if (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') {
         setShowPaymentModal(true);
     } else {
+        // En CUALQUIER otro caso (Retiro, Flash, o Moto en Efectivo), va a WhatsApp directo
         executeOrder(); 
     }
   };
 
   const executeOrder = async () => {
-    setShowPaymentModal(false);
+    setShowPaymentModal(false); // Nos aseguramos de ocultar el modal por si acaso
     setIsSending(true);
     let currentCart = [...cart];
     const finalTotal = calculateTotal(currentCart);
 
     let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n\n`;
     
-    if (deliveryMethod === 'envio' && shippingType === 'moto') {
+    // TEXTO INTELIGENTE SEGÚN LO QUE ELIGIERON
+    if (deliveryMethod === 'retiro') {
+        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
+    } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
+        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n`;
+    } else if (deliveryMethod === 'envio' && shippingType === 'moto') {
         if (paymentMethod === 'transferencia') {
             msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
         } else {
             msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido y *pago en efectivo* al recibir:\n\n`;
         }
-    } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n`;
-    } else {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
     }
     
     msg += `*Resumen:*\n`;
@@ -352,24 +354,24 @@ export default function Home() {
 
     msg += `\n*TOTAL: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
-    if (deliveryMethod === 'envio') {
-        msg += `*ENTREGA:* ${address}, ${zone}\n`;
+    // DATOS DE ENTREGA
+    if (deliveryMethod === 'retiro') {
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
+    } else {
+        msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
-        if (shippingType === 'flash') msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
-        else {
+        
+        if (shippingType === 'flash') {
+            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
+        } else {
             msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
             if (paymentMethod === 'transferencia') {
                 msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
             } else {
                 msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
             }
         }
-    } else {
-        msg += `*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
-    }
-
-    if (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') {
-        msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
     }
     
     const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
@@ -378,8 +380,11 @@ export default function Home() {
             addDoc(collection(firebaseRefs.db, 'orders'), { 
                 userId: user?.uid || "anon", clientName, clientPhone, 
                 items: currentCart.map(i => ({ name: i.name, qty: i.qty, price: i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i) })), 
-                total: finalTotal, delivery: deliveryMethod, address, zone, 
-                aptDetails: aptDetails.trim(), 
+                total: finalTotal, 
+                delivery: deliveryMethod, 
+                address: deliveryMethod === 'envio' ? address : '', 
+                zone: deliveryMethod === 'envio' ? zone : '', 
+                aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
                 shippingOption: deliveryMethod === 'envio' ? shippingType : null,
                 paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
                 couponUsed: appliedCoupon ? appliedCoupon.code : null,
