@@ -13,6 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
+  paymentAlias: "tu.alias.belo", // <-- ACÁ PONÉ TU ALIAS REAL
 };
 
 const AVAILABLE_ICONS = [
@@ -108,6 +109,7 @@ export default function Home() {
   const [zone, setZone] = useState('');
   const [aptDetails, setAptDetails] = useState(''); 
   const [showTooltip, setShowTooltip] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false); // NUEVO ESTADO PARA EL MODAL DE PAGO
   
   const [deptIcons, setDeptIcons] = useState({});
   const [user, setUser] = useState(null);
@@ -302,19 +304,21 @@ export default function Home() {
       showToast(`✅ Oferta agregada: ${prod.name}`);
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
     if (deliveryMethod === 'envio' && (!address.trim() || !zone.trim())) { showToast("⚠️ Completá dirección y localidad."); return; }
     
-    executeOrder(); 
+    // EN VEZ DE MANDAR A WHATSAPP DE UNA, ABRIMOS EL MODAL DE PAGO OFFLINE
+    setShowPaymentModal(true);
   };
 
   const executeOrder = async () => {
+    setShowPaymentModal(false);
     setIsSending(true);
     let currentCart = [...cart];
     
     const finalTotal = calculateTotal(currentCart);
-    let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n`;
+    let msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
     
     currentCart.forEach(i => { 
         if (i.isUpsell) {
@@ -328,14 +332,17 @@ export default function Home() {
         msg += `\n🎟️ *CUPÓN APLICADO:* ${appliedCoupon.code} (-${appliedCoupon.discount}% OFF)\n`;
     }
 
-    msg += `\n*TOTAL FINAL: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n\n`;
+    msg += `\n*TOTAL PAGADO: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
+    msg += `🏦 *Acreditado al Alias:* ${CONFIG.paymentAlias}\n\n`;
     
     if (deliveryMethod === 'envio') {
         msg += `*ENVÍO:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
-        if (shippingType === 'flash') msg += `*TIPO DE ENVÍO:* 🚀 Flash (Menos de 30' - Solo Transferencia)`;
-        else msg += `*TIPO DE ENVÍO:* 🛵 Motomensajería (Menos de 1:30hr - Efectivo o Transf)`;
+        if (shippingType === 'flash') msg += `*TIPO DE ENVÍO:* 🚀 Flash (Menos de 30 mins)`;
+        else msg += `*TIPO DE ENVÍO:* 🛵 Motomensajería`;
     } else { msg += `*RETIRO LOCAL*`; }
+
+    msg += `\n\nAdjunto mi comprobante de pago a continuación 👇`;
     
     const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
     try { 
@@ -347,11 +354,16 @@ export default function Home() {
                 aptDetails: aptDetails.trim(), 
                 shippingOption: deliveryMethod === 'envio' ? shippingType : null,
                 couponUsed: appliedCoupon ? appliedCoupon.code : null,
-                status: 'pending', createdAt: serverTimestamp() 
+                status: 'pending_verification', createdAt: serverTimestamp() 
             }).catch(e => console.error(e)); 
         } 
         setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
     } catch (e) { window.location.href = whatsappUrl; setIsSending(false); }
+  };
+
+  const copyAliasToClipboard = () => {
+    navigator.clipboard.writeText(CONFIG.paymentAlias);
+    showToast("✅ ALIAS copiado al portapapeles");
   };
 
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
@@ -405,7 +417,7 @@ export default function Home() {
 
   const renderLegalPage = () => {
     const pageData = PAGE_CONTENT[currentView]; if (!pageData) return null;
-    return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-none font-poppins">{pageData.body}</div></div></div>);
+    return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-w-none font-poppins">{pageData.body}</div></div></div>);
   };
 
   return (
@@ -641,7 +653,7 @@ export default function Home() {
                 </div>
               )}
               </div>
-              </div>)}</div>{cart.length > 0 && (<div className="p-6 bg-white border-t border-gray-200 sticky bottom-0 z-20"><div className="flex justify-between items-end mb-4"><span className="font-bold text-gray-500 text-[10px] uppercase tracking-widest font-poppins">Total a Pagar</span><span className="font-bebas text-5xl text-[#111111] tracking-wide leading-none drop-shadow-sm"><span className="text-[#fcdb00] text-3xl mr-1.5">{CONFIG.currencySymbol}</span>{formatPrice(calculateTotal())}</span></div><button onClick={handleCheckout} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500 border-none' : 'bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] active:scale-95'} font-bebas py-4 rounded-xl uppercase tracking-wider text-xl flex justify-center items-center gap-3 transition-all duration-300`}>{isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Confirmar Pedido</>}</button></div>)}</div></div>)}
+              </div>)}</div>{cart.length > 0 && (<div className="p-6 bg-white border-t border-gray-200 sticky bottom-0 z-20"><div className="flex justify-between items-end mb-4"><span className="font-bold text-gray-500 text-[10px] uppercase tracking-widest font-poppins">Total a Pagar</span><span className="font-bebas text-5xl text-[#111111] tracking-wide leading-none drop-shadow-sm"><span className="text-[#fcdb00] text-3xl mr-1.5">{CONFIG.currencySymbol}</span>{formatPrice(calculateTotal())}</span></div><button onClick={handleCheckout} className={`w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] active:scale-95 font-bebas py-4 rounded-xl uppercase tracking-wider text-xl flex justify-center items-center gap-3 transition-all duration-300`}><i className="fas fa-check-circle text-2xl mb-0.5"></i> Confirmar Pedido</button></div>)}</div></div>)}
       
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] flex flex-col items-end gap-3 group">
         <div className={`bg-white text-[#111111] p-3 md:p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-200 max-w-[180px] md:max-w-[200px] text-center transform transition-all duration-700 ease-out origin-bottom-right relative ${showTooltip ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100'}`}>
@@ -650,6 +662,47 @@ export default function Home() {
         </div>
         <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white text-3xl shadow-[0_10px_30px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform duration-300"><i className="fab fa-whatsapp"></i></a>
       </div>
+
+      {/* --- MODAL DE PAGO OFFLINE --- */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowPaymentModal(false)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            
+            <div className="bg-[#111111] p-6 text-center relative border-b border-white/10">
+              <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times"></i></button>
+              <div className="w-16 h-16 bg-[#fcdb00] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"><i className="fas fa-wallet text-3xl text-[#111111]"></i></div>
+              <h2 className="text-3xl font-bebas text-white uppercase tracking-wide">¡Pedido Reservado!</h2>
+              <p className="text-[#fcdb00] text-[11px] font-bold uppercase tracking-widest font-poppins">Falta 1 paso para despacharlo</p>
+            </div>
+
+            <div className="p-6 md:p-8 flex flex-col gap-6">
+              <div className="text-center">
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 font-poppins">Total a transferir</p>
+                <p className="text-5xl font-bebas text-[#111111] leading-none tracking-wide"><span className="text-[#fcdb00] text-3xl mr-1">$</span>{formatPrice(calculateTotal())}</p>
+              </div>
+
+              <div className="bg-[#f2f2f2] p-5 rounded-2xl border border-gray-200 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#fcdb00]"></div>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 font-poppins"><i className="fas fa-university text-[#fcdb00] mr-1"></i> Transferir al ALIAS:</p>
+                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                  <span className="font-bebas text-2xl text-[#111111] tracking-wider truncate">{CONFIG.paymentAlias}</span>
+                  <button onClick={copyAliasToClipboard} className="w-10 h-10 bg-[#f2f2f2] rounded-lg flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex-shrink-0"><i className="fas fa-copy"></i></button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <button onClick={executeOrder} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500' : 'bg-[#25D366] text-white hover:scale-[1.02] shadow-lg shadow-[#25D366]/30'} py-4 rounded-xl font-bebas text-xl uppercase tracking-wider transition-all flex items-center justify-center gap-3`}>
+                  {isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Enviar Comprobante</>}
+                </button>
+                <p className="text-[9px] text-gray-400 font-medium text-center font-poppins uppercase tracking-widest leading-relaxed">
+                  Realizá la transferencia desde tu app bancaria y envianos la captura por WhatsApp tocando el botón verde.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     </div>
