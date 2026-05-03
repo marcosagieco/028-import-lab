@@ -269,6 +269,7 @@ export default function Home() {
   const calculateTotal = (cartData = cart) => {
       let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
       if (appliedCoupon) { subtotal = subtotal * (1 - (appliedCoupon.discount / 100)); } 
+      
       let envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
       return subtotal + envio;
   };
@@ -365,20 +366,20 @@ export default function Home() {
     msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:*  Retiro en Showroom\n`;
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
     } else {
         msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
         
         if (shippingType === 'flash') {
-            msg += `*LOGÍSTICA:*  Flash (30 mins)\n`;
+            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
         } else {
-            msg += `*LOGÍSTICA:*  Motomensajería\n`;
+            msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
             if (paymentMethod === 'transferencia') {
-                msg += ` *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
-                msg += `\nAdjunto mi comprobante de pago a continuación `;
+                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
             } else {
-                msg += ` *Método de pago:* Efectivo contra entrega\n`;
+                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
             }
         }
     }
@@ -404,7 +405,6 @@ export default function Home() {
         setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
     } catch (e) { window.location.href = whatsappUrl; setIsSending(false); }
   };
-
   const copyAliasToClipboard = () => {
     navigator.clipboard.writeText(CONFIG.paymentAlias);
     showToast("✅ ALIAS copiado al portapapeles");
@@ -659,6 +659,29 @@ export default function Home() {
             )}
         </div>
         <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
+              
+              {deliveryMethod === 'retiro' && (
+                <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 mt-4">
+                  <div className="w-full h-[200px] rounded-xl overflow-hidden border border-gray-200 shadow-sm relative">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      frameBorder="0" 
+                      style={{ border: 0 }}
+                      src="https://maps.google.com/maps?q=Mi%C3%B1ones%20y%20Juramento,%20Belgrano,%20CABA&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                  <div className="bg-[#fcdb00]/10 border border-[#fcdb00] p-4 rounded-xl flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
+                    <div className="flex flex-col">
+                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones y Juramento</span>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos los detalles exactos al confirmar.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {deliveryMethod === 'envio' && (
                 <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 font-poppins">
                   <div className="flex flex-col gap-3 mb-2">
