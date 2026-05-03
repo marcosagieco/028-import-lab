@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "tu.alias.belo", // <-- TU ALIAS ACÁ
 };
 
 const AVAILABLE_ICONS = [
@@ -103,7 +103,7 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('retiro');
   const [shippingType, setShippingType] = useState('flash'); 
-  const [paymentMethod, setPaymentMethod] = useState('transferencia'); // EL NUEVO ESTADO DE PAGO
+  const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -124,7 +124,6 @@ export default function Home() {
   const [activeCouponsDb, setActiveCouponsDb] = useState([]); 
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-
   const [upsellsList, setUpsellsList] = useState([]);
 
   const departments = useMemo(() => [...new Set(products.map(p => p.department).filter(Boolean))], [products]);
@@ -210,7 +209,6 @@ export default function Home() {
         if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
       });
       const unsubscribeCoupons = onSnapshot(collection(firebaseRefs.db, 'coupons'), (snap) => setActiveCouponsDb(!snap.empty ? snap.docs.map(d => d.data()) : []));
-      
       const unsubscribeUpsells = onSnapshot(collection(firebaseRefs.db, 'upsells'), (snap) => {
         setUpsellsList(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []);
       });
@@ -307,26 +305,29 @@ export default function Home() {
 
   const handleCheckout = () => {
     if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
-    if (deliveryMethod === 'envio' && (!address.trim() || !zone.trim())) { showToast("⚠️ Completá dirección y localidad."); return; }
     
-    // MAGIA ACÁ: Solo mostramos Modal si es Envío -> Moto -> Transferencia
-    if (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') {
-        setShowPaymentModal(true);
-    } else {
-        // En CUALQUIER otro caso (Retiro, Flash, o Moto en Efectivo), va a WhatsApp directo
-        executeOrder(); 
+    if (deliveryMethod === 'envio') {
+        if (!address.trim() || !zone.trim()) { showToast("⚠️ Completá dirección y localidad."); return; }
+        
+        // LA ÚNICA CONDICIÓN PARA ABRIR EL CARTEL: Envío + Moto + Transferencia
+        if (shippingType === 'moto' && paymentMethod === 'transferencia') {
+            setShowPaymentModal(true);
+            return;
+        }
     }
+    
+    // Si eligió Retiro Local, Flash, o Moto en Efectivo, pasa por acá abajo:
+    executeOrder();
   };
 
   const executeOrder = async () => {
-    setShowPaymentModal(false); // Nos aseguramos de ocultar el modal por si acaso
+    setShowPaymentModal(false);
     setIsSending(true);
     let currentCart = [...cart];
     const finalTotal = calculateTotal(currentCart);
 
     let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n\n`;
     
-    // TEXTO INTELIGENTE SEGÚN LO QUE ELIGIERON
     if (deliveryMethod === 'retiro') {
         msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
     } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
@@ -354,7 +355,6 @@ export default function Home() {
 
     msg += `\n*TOTAL: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
-    // DATOS DE ENTREGA
     if (deliveryMethod === 'retiro') {
         msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
     } else {
@@ -380,8 +380,7 @@ export default function Home() {
             addDoc(collection(firebaseRefs.db, 'orders'), { 
                 userId: user?.uid || "anon", clientName, clientPhone, 
                 items: currentCart.map(i => ({ name: i.name, qty: i.qty, price: i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i) })), 
-                total: finalTotal, 
-                delivery: deliveryMethod, 
+                total: finalTotal, delivery: deliveryMethod, 
                 address: deliveryMethod === 'envio' ? address : '', 
                 zone: deliveryMethod === 'envio' ? zone : '', 
                 aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
@@ -400,7 +399,6 @@ export default function Home() {
     navigator.clipboard.writeText(CONFIG.paymentAlias);
     showToast("✅ ALIAS copiado al portapapeles");
   };
-
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
     const inCart = cart.find(i => i.id === p.id);
     const isOutOfStock = p.inStock === false;
@@ -454,6 +452,7 @@ export default function Home() {
     const pageData = PAGE_CONTENT[currentView]; if (!pageData) return null;
     return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-w-none font-poppins">{pageData.body}</div></div></div>);
   };
+
   return (
     <div className="bg-[#f2f2f2] text-[#111111] font-poppins flex flex-col relative pb-20 md:pb-0 min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
       <style dangerouslySetInnerHTML={{__html: `
