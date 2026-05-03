@@ -270,12 +270,10 @@ export default function Home() {
       return subtotal;
   };
 
-  // BOTÓN "COMPRAR AHORA" - VERSIÓN ANTI-CONGELAMIENTO
   const addToCart = async (product, e) => { 
     if(e) e.stopPropagation(); 
     if (product.inStock === false) return; 
 
-    // 1. PRIMERO agregamos al carrito para que la página sea instantánea
     setCart(prev => { 
         const existing = prev.find(item => item.id === product.id); 
         if (existing) return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item); 
@@ -284,7 +282,6 @@ export default function Home() {
     showToast(`✅ Añadido: ${product.name}`); 
     if(selectedProduct) setSelectedProduct(null); 
 
-    // 2. SEGUNDO, le avisamos a Firebase en segundo plano SIN bloquear (sin "await")
     if (firebaseRefs.db) {
       try { 
           setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { clicks: increment(1) }, { merge: true }).catch(e => console.error(e)); 
@@ -312,7 +309,6 @@ export default function Home() {
     executeOrder(); 
   };
 
-  // BOTÓN "CONFIRMAR PEDIDO" - VERSIÓN ANTI-CONGELAMIENTO
   const executeOrder = async () => {
     setIsSending(true);
     let currentCart = [...cart];
@@ -344,7 +340,6 @@ export default function Home() {
     const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
     try { 
         if (firebaseRefs.db) { 
-            // Guardamos en la base de datos de fondo SIN bloquear el pase a WhatsApp
             addDoc(collection(firebaseRefs.db, 'orders'), { 
                 userId: user?.uid || "anon", clientName, clientPhone, 
                 items: currentCart.map(i => ({ name: i.name, qty: i.qty, price: i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i) })), 
@@ -477,7 +472,6 @@ export default function Home() {
           <div className="animate-marquee whitespace-nowrap flex items-center">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-8 px-4 text-[#fcdb00] font-poppins font-bold text-[10px] md:text-xs tracking-widest uppercase">
-                {/* ACÁ ABAJO ESTÁ EL TEXTO DEL MARQUEE PARA QUE LO EDITES */}
                 <span> ENVIOS 24HS CABA/AMBA </span><span className="text-white/30">•</span>
                  <span> 028 IMPORT </span><span className="text-white/30">•</span>
                   <span> ATENCION PERSONALIZADA POR WHATSAPP </span><span className="text-white/30">•</span>
@@ -615,24 +609,27 @@ export default function Home() {
                   <div className="flex flex-col gap-3 mb-2">
                     <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">Elegí tu opción de envío:</label>
                     <div onClick={() => setShippingType('flash')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'flash' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
-                      <div className="text-3xl">🚀</div>
+                      <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-bolt text-lg"></i></div>
                       <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'flash' ? 'text-[#111111]' : 'text-gray-700'}`}>Envío Flash</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏱️ Te llega en menos de 30 minutos.<br/>💳 Abonando solo por transferencia.</span></div>
                       {shippingType === 'flash' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                     <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
-                      <div className="text-3xl">🛵</div>
+                      <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
                       <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.<br/>💵 Efectivo y transf. contra entrega.</span></div>
                       {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                   </div>
-                  <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                  
+                  {/* AQUÍ ESTÁ EL CALCULADOR QUE AHORA CONTIENE LOS INPUTS DE DIRECCIÓN */}
+                  <CalculadorEnvio 
+                    address={address} setAddress={setAddress}
+                    zone={zone} setZone={setZone}
+                    shippingType={shippingType}
+                  />
+                  
                   <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                  <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
                 </div>
               )}
-              </div>
-              <div className={`mt-4 animate-in fade-in zoom-in-95 duration-300 ${deliveryMethod === 'envio' && shippingType === 'moto' ? 'block' : 'hidden'}`}>
-                <CalculadorEnvio />
               </div>
               </div>)}</div>{cart.length > 0 && (<div className="p-6 bg-white border-t border-gray-200 sticky bottom-0 z-20"><div className="flex justify-between items-end mb-4"><span className="font-bold text-gray-500 text-[10px] uppercase tracking-widest font-poppins">Total a Pagar</span><span className="font-bebas text-5xl text-[#111111] tracking-wide leading-none drop-shadow-sm"><span className="text-[#fcdb00] text-3xl mr-1.5">{CONFIG.currencySymbol}</span>{formatPrice(calculateTotal())}</span></div><button onClick={handleCheckout} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500 border-none' : 'bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] active:scale-95'} font-bebas py-4 rounded-xl uppercase tracking-wider text-xl flex justify-center items-center gap-3 transition-all duration-300`}>{isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Confirmar Pedido</>}</button></div>)}</div></div>)}
       
