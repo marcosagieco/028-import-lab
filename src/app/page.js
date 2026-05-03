@@ -405,7 +405,7 @@ export default function Home() {
 
   const renderLegalPage = () => {
     const pageData = PAGE_CONTENT[currentView]; if (!pageData) return null;
-    return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-w-none font-poppins">{pageData.body}</div></div></div>);
+    return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-none font-poppins">{pageData.body}</div></div></div>);
   };
 
   return (
@@ -620,12 +620,22 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  {/* AQUÍ ESTÁ EL CALCULADOR QUE AHORA CONTIENE LOS INPUTS DE DIRECCIÓN */}
-                  <CalculadorEnvio 
-                    address={address} setAddress={setAddress}
-                    zone={zone} setZone={setZone}
-                    shippingType={shippingType}
-                  />
+                  {/* SI ES FLASH: CAMPOS NORMALES */}
+                  {shippingType === 'flash' && (
+                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+                      <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                      <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                    </div>
+                  )}
+
+                  {/* SI ES MOTO: CALCULADOR INTELIGENTE */}
+                  {shippingType === 'moto' && (
+                    <CalculadorEnvio 
+                      address={address} setAddress={setAddress}
+                      zone={zone} setZone={setZone}
+                      shippingType={shippingType}
+                    />
+                  )}
                   
                   <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
                 </div>
