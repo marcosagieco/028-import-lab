@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "028import.bell", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
 };
 
 const AVAILABLE_ICONS = [
