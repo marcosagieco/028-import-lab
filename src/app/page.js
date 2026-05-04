@@ -87,7 +87,7 @@ const initialProducts = [
 
 const PAGE_CONTENT = {
   terminos: { title: "Términos y Condiciones", subtitle: "Políticas Legales", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p><strong>1. Naturaleza del Servicio:</strong> 028 IMPORT opera como intermediario e importador directo de productos tecnológicos y artículos de vapeo de primera línea.</p><p><strong>2. Precios y Disponibilidad:</strong> Los valores publicados y el stock se encuentran sujetos a modificaciones sin previo aviso, derivado de la dinámica propia de la importación y las fluctuaciones cambiarias del mercado.</p><p><strong>3. Proceso y Confirmación de Compra:</strong> La selección de artículos a través de esta plataforma web representa una solicitud o intención de reserva. La transacción únicamente se considerará perfeccionada y confirmada tras la comunicación directa con nuestro equipo comercial vía WhatsApp y la posterior acreditación del pago.</p><p><strong>4. Garantías y Responsabilidad:</strong> Garantizamos la originalidad y autenticidad del 100% de nuestro catálogo. Se contempla garantía exclusiva por defectos de fabricación de origen. 028 IMPORT no asume responsabilidad alguna por daños derivados del mal uso, manipulación incorrecta o desgaste natural de los dispositivos adquiridos.</p></div>) },
-  privacidad: { title: "Política de Privacidad", subtitle: "Protección de Datos", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad. Los datos recopilados durante el proceso de reserva son utilizados estrictamente para fines logísticos y de facturación.</p></div>) },
+  privacidad: { title: "Política de Privacidad", subtitle: "Protección de Datos", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad. Los datos recopilados durante el proceso de reserva son utilizados strictly para fines logísticos y de facturación.</p></div>) },
   pagos: { title: "Medios de Pago", subtitle: "Transacciones Seguras", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En <strong>028 IMPORT</strong> priorizamos la seguridad, agilidad y transparencia en cada operación financiera. Con el objetivo de proteger su integridad crediticia, todas las transacciones de pago se procesan de manera externa a nuestro sitio web.</p><div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mt-4"><h3 className="font-bebas text-2xl uppercase tracking-wide mb-4 text-[#111111]">Opciones Habilitadas:</h3><ul className="space-y-4"><li><strong><i className="fas fa-university text-[#b8952a] mr-2"></i> Transferencia Bancaria (ARS/USD):</strong> Acreditación inmediata. Las coordenadas bancarias (CBU/Alias) se suministrarán exclusivamente vía WhatsApp al validar su pedido.</li><li><strong><i className="fas fa-money-bill-wave text-[#b8952a] mr-2"></i> Efectivo Contra Entrega:</strong> Modalidad disponible únicamente para logística vía Motomensajería dentro de CABA y GBA, o retiros de forma presencial en nuestro showroom.</li><li><strong><i className="fab fa-bitcoin text-[#b8952a] mr-2"></i> Criptomonedas (USDT):</strong> Operamos a través de la red TRC-20 u otras a convenir. Consulte la cotización del momento con su asesor comercial.</li></ul></div><p className="mt-6 p-4 bg-red-50 text-red-800 rounded-xl border border-red-200 text-sm"><strong>⚠️ Importante:</strong> Bajo ninguna circunstancia el personal de 028 IMPORT le solicitará los dígitos de su tarjeta de crédito, claves de seguridad o contraseñas bancarias a través de esta plataforma ni por canales no oficiales.</p></div>) },
   arrepentimiento: { title: "Botón de Arrepentimiento", subtitle: "Devoluciones", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>Usted tiene el derecho irrevocable de cancelar su compra dentro de un plazo máximo de 10 días corridos.</p></div>) }
 };
@@ -114,7 +114,6 @@ export default function Home() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
-  // NUEVOS ESTADOS DE LOGÍSTICA PARA MOTO
   const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryTime, setDeliveryTime] = useState('13:00');
 
@@ -132,7 +131,6 @@ export default function Home() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [upsellsList, setUpsellsList] = useState([]);
 
-  // LÓGICA PARA LOS PRÓXIMOS 7 DÍAS
   const next7Days = useMemo(() => {
     const days = [];
     const today = new Date();
@@ -404,7 +402,6 @@ export default function Home() {
         } else {
             msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
             
-            // AGREGAMOS EL DÍA Y HORARIO ACÁ
             const selectedLabel = next7Days.find(d => d.value === deliveryDate)?.label || deliveryDate;
             msg += `📅 *Día:* ${selectedLabel}\n`;
             msg += `⏰ *Turno:* ${deliveryTime} hs\n`;
@@ -446,6 +443,7 @@ export default function Home() {
     navigator.clipboard.writeText(CONFIG.paymentAlias);
     showToast("✅ ALIAS copiado al portapapeles");
   };
+
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
     const inCart = cart.find(i => i.id === p.id);
     const isOutOfStock = p.inStock === false;
@@ -681,19 +679,6 @@ export default function Home() {
         )}
         
         </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-        <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
-            <p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-ticket-alt text-[#fcdb00] text-xl"></i> Descuentos</p>
-            <div className="flex gap-2">
-                <input type="text" placeholder="CÓDIGO INFLUENCER" value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} className="flex-1 p-3 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold uppercase tracking-widest outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400 font-poppins" />
-                <button onClick={handleApplyCoupon} className="bg-[#111111] text-[#fcdb00] px-4 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#fcdb00] hover:text-[#111111] transition-colors shadow-md">Aplicar</button>
-            </div>
-            {appliedCoupon && (
-                <div className="mt-3 flex items-center justify-between bg-green-50 p-2 rounded-lg border border-green-200">
-                    <span className="text-[10px] font-bold text-green-700 uppercase tracking-widest"><i className="fas fa-check-circle mr-1"></i> Cupón {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</span>
-                    <button onClick={() => setAppliedCoupon(null)} className="text-red-500 hover:text-red-700 text-xs"><i className="fas fa-times"></i></button>
-                </div>
-            )}
-        </div>
         <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
               
               {deliveryMethod === 'retiro' && (
