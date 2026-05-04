@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "028import.bell", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
   paymentName: "Lucio Bunge", // <-- NOMBRE DEL TITULAR
 };
 
@@ -499,6 +499,13 @@ export default function Home() {
           width: max-content;
           animation: marquee 60s linear infinite;
           will-change: transform;
+        }
+
+        /* --- SOLUCIÓN AL ZOOM MOLESTO EN CELULARES --- */
+        @media screen and (max-width: 768px) {
+          input, select, textarea {
+            font-size: 16px !important;
+          }
         }
       `}} />
       {toastMessage && (<div className="fixed top-5 left-1/2 -translate-x-1/2 z-[300] bg-[#111111]/90 backdrop-blur-xl text-white px-6 py-4 rounded-full shadow-[0_20px_40px_rgba(252,219,0,0.2)] border border-[#fcdb00]/30 font-bold text-xs uppercase tracking-widest flex items-center gap-3 animate-in slide-in-from-top-10 fade-in duration-300">{toastMessage}</div>)}
