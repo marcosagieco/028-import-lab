@@ -683,7 +683,7 @@ export default function Home() {
                     <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
                     <div className="flex flex-col">
                       <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones 2061</span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos el depto exacto al confirmar.</span>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.</span>
                     </div>
                   </div>
                 </div>
