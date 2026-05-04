@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "028import.bell", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
   paymentName: "Lucio Bunge", // <-- NOMBRE DEL TITULAR
 };
 
@@ -114,6 +114,10 @@ export default function Home() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
+  // NUEVOS ESTADOS DE LOGÍSTICA PARA MOTO
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [deliveryTime, setDeliveryTime] = useState('13:00');
+
   const [deptIcons, setDeptIcons] = useState({});
   const [user, setUser] = useState(null);
   const [dbUser, setDbUser] = useState(null); 
@@ -127,6 +131,29 @@ export default function Home() {
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [upsellsList, setUpsellsList] = useState([]);
+
+  // LÓGICA PARA LOS PRÓXIMOS 7 DÍAS
+  const next7Days = useMemo(() => {
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateString = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' });
+      const formatted = dateString.charAt(0).toUpperCase() + dateString.slice(1);
+      days.push({
+         value: date.toISOString().split('T')[0],
+         label: i === 0 ? `Hoy (${formatted})` : i === 1 ? `Mañana (${formatted})` : formatted
+      });
+    }
+    return days;
+  }, []);
+
+  useEffect(() => {
+    if (next7Days.length > 0 && !deliveryDate) {
+        setDeliveryDate(next7Days[0].value);
+    }
+  }, [next7Days, deliveryDate]);
 
   const departments = useMemo(() => [...new Set(products.map(p => p.department).filter(Boolean))], [products]);
   const uniqueCategories = useMemo(() => {
@@ -376,6 +403,12 @@ export default function Home() {
             msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
         } else {
             msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
+            
+            // AGREGAMOS EL DÍA Y HORARIO ACÁ
+            const selectedLabel = next7Days.find(d => d.value === deliveryDate)?.label || deliveryDate;
+            msg += `📅 *Día:* ${selectedLabel}\n`;
+            msg += `⏰ *Turno:* ${deliveryTime} hs\n`;
+
             if (paymentMethod === 'transferencia') {
                 msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
                 msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
@@ -397,6 +430,8 @@ export default function Home() {
                 aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
                 shippingOption: deliveryMethod === 'envio' ? shippingType : null,
                 paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
+                deliveryDate: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryDate : null,
+                deliveryTime: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryTime : null,
                 shippingCost: costoEnvioAgregado,
                 couponUsed: appliedCoupon ? appliedCoupon.code : null,
                 status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
@@ -406,11 +441,11 @@ export default function Home() {
         setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
     } catch (e) { window.location.href = whatsappUrl; setIsSending(false); }
   };
+
   const copyAliasToClipboard = () => {
     navigator.clipboard.writeText(CONFIG.paymentAlias);
     showToast("✅ ALIAS copiado al portapapeles");
   };
-
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
     const inCart = cart.find(i => i.id === p.id);
     const isOutOfStock = p.inStock === false;
@@ -678,8 +713,8 @@ export default function Home() {
                   <div className="bg-[#fcdb00]/10 border border-[#fcdb00] p-4 rounded-xl flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
                     <div className="flex flex-col">
-                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones y Juramento</span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.</span>
+                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones 2061</span>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos el depto exacto al confirmar.</span>
                     </div>
                   </div>
                 </div>
@@ -696,7 +731,7 @@ export default function Home() {
                     </div>
                     <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
                       <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Llegamos en menos de 1:30hr.</span></div>
+                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Horarios fijos de recorrido: 13:00 y 18:00hs.</span></div>
                       {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                   </div>
@@ -722,6 +757,36 @@ export default function Home() {
                         shippingType={shippingType}
                         setShippingCost={setShippingCost}
                       />
+                      
+                      <div className="flex flex-col gap-3 mt-2">
+                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cuándo querés recibirlo?</label>
+                        
+                        {/* SELECTOR DE FECHA (PRÓXIMOS 7 DÍAS) */}
+                        <div className="relative">
+                          <i className="fas fa-calendar-alt absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                          <select 
+                            value={deliveryDate} 
+                            onChange={(e) => setDeliveryDate(e.target.value)} 
+                            className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#fcdb00] transition-all appearance-none cursor-pointer text-[#111111]"
+                          >
+                            {next7Days.map(d => (
+                              <option key={d.value} value={d.value}>{d.label}</option>
+                            ))}
+                          </select>
+                          <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[10px]"></i>
+                        </div>
+
+                        {/* SELECTOR DE HORARIO (13HS O 18HS) */}
+                        <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
+                          <button onClick={() => setDeliveryTime('13:00')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryTime === '13:00' ? 'bg-white text-[#111111] shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-sun"></i> Turno 13:00
+                          </button>
+                          <button onClick={() => setDeliveryTime('18:00')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryTime === '18:00' ? 'bg-white text-[#111111] shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-moon"></i> Turno 18:00
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="flex flex-col gap-2 mt-2">
                         <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cómo querés abonar?</label>
                         <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
