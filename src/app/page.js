@@ -87,7 +87,7 @@ const initialProducts = [
 
 const PAGE_CONTENT = {
   terminos: { title: "Términos y Condiciones", subtitle: "Políticas Legales", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p><strong>1. Naturaleza del Servicio:</strong> 028 IMPORT opera como intermediario e importador directo de productos tecnológicos y artículos de vapeo de primera línea.</p><p><strong>2. Precios y Disponibilidad:</strong> Los valores publicados y el stock se encuentran sujetos a modificaciones sin previo aviso, derivado de la dinámica propia de la importación y las fluctuaciones cambiarias del mercado.</p><p><strong>3. Proceso y Confirmación de Compra:</strong> La selección de artículos a través de esta plataforma web representa una solicitud o intención de reserva. La transacción únicamente se considerará perfeccionada y confirmada tras la comunicación directa con nuestro equipo comercial vía WhatsApp y la posterior acreditación del pago.</p><p><strong>4. Garantías y Responsabilidad:</strong> Garantizamos la originalidad y autenticidad del 100% de nuestro catálogo. Se contempla garantía exclusiva por defectos de fabricación de origen. 028 IMPORT no asume responsabilidad alguna por daños derivados del mal uso, manipulación incorrecta o desgaste natural de los dispositivos adquiridos.</p></div>) },
-  privacidad: { title: "Política de Privacidad", subtitle: "Protección de Datos", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad. Los datos recopilados durante el proceso de reserva son utilizados strictly para fines logísticos y de facturación.</p></div>) },
+  privacidad: { title: "Política de Privacidad", subtitle: "Protección de Datos", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad. Los datos recopilados durante el proceso de reserva son utilizados estrictamente para fines logísticos y de facturación.</p></div>) },
   pagos: { title: "Medios de Pago", subtitle: "Transacciones Seguras", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En <strong>028 IMPORT</strong> priorizamos la seguridad, agilidad y transparencia en cada operación financiera. Con el objetivo de proteger su integridad crediticia, todas las transacciones de pago se procesan de manera externa a nuestro sitio web.</p><div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mt-4"><h3 className="font-bebas text-2xl uppercase tracking-wide mb-4 text-[#111111]">Opciones Habilitadas:</h3><ul className="space-y-4"><li><strong><i className="fas fa-university text-[#b8952a] mr-2"></i> Transferencia Bancaria (ARS/USD):</strong> Acreditación inmediata. Las coordenadas bancarias (CBU/Alias) se suministrarán exclusivamente vía WhatsApp al validar su pedido.</li><li><strong><i className="fas fa-money-bill-wave text-[#b8952a] mr-2"></i> Efectivo Contra Entrega:</strong> Modalidad disponible únicamente para logística vía Motomensajería dentro de CABA y GBA, o retiros de forma presencial en nuestro showroom.</li><li><strong><i className="fab fa-bitcoin text-[#b8952a] mr-2"></i> Criptomonedas (USDT):</strong> Operamos a través de la red TRC-20 u otras a convenir. Consulte la cotización del momento con su asesor comercial.</li></ul></div><p className="mt-6 p-4 bg-red-50 text-red-800 rounded-xl border border-red-200 text-sm"><strong>⚠️ Importante:</strong> Bajo ninguna circunstancia el personal de 028 IMPORT le solicitará los dígitos de su tarjeta de crédito, claves de seguridad o contraseñas bancarias a través de esta plataforma ni por canales no oficiales.</p></div>) },
   arrepentimiento: { title: "Botón de Arrepentimiento", subtitle: "Devoluciones", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>Usted tiene el derecho irrevocable de cancelar su compra dentro de un plazo máximo de 10 días corridos.</p></div>) }
 };
@@ -126,9 +126,6 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const [activeCouponsDb, setActiveCouponsDb] = useState([]); 
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [upsellsList, setUpsellsList] = useState([]);
 
   const next7Days = useMemo(() => {
@@ -235,12 +232,11 @@ export default function Home() {
       const unsubscribeDeptIcons = onSnapshot(doc(firebaseRefs.db, 'settings', 'departments'), (snap) => {
         if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
       });
-      const unsubscribeCoupons = onSnapshot(collection(firebaseRefs.db, 'coupons'), (snap) => setActiveCouponsDb(!snap.empty ? snap.docs.map(d => d.data()) : []));
       const unsubscribeUpsells = onSnapshot(collection(firebaseRefs.db, 'upsells'), (snap) => {
         setUpsellsList(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []);
       });
 
-      return () => { unsubscribeAuth(); unsubscribeStock(); unsubscribePromos(); unsubscribeHomeSections(); unsubscribeDeptIcons(); unsubscribeCoupons(); unsubscribeUpsells(); window.removeEventListener('focus', handleFocus); window.removeEventListener('pageshow', handleFocus); };
+      return () => { unsubscribeAuth(); unsubscribeStock(); unsubscribePromos(); unsubscribeHomeSections(); unsubscribeDeptIcons(); unsubscribeUpsells(); window.removeEventListener('focus', handleFocus); window.removeEventListener('pageshow', handleFocus); };
     }
   }, [firebaseRefs]);
 
@@ -271,20 +267,6 @@ export default function Home() {
       } catch (error) { console.error(error); showToast("Error al iniciar con Google"); }
   };
 
-  const handleApplyCoupon = () => {
-      const code = couponInput.trim().toUpperCase();
-      if(!code) return;
-      const found = activeCouponsDb.find(c => c.code === code && c.active);
-      if (found) {
-          setAppliedCoupon(found);
-          showToast(`¡Cupón ${code} aplicado! (-${found.discount}%)`);
-          setCouponInput('');
-      } else {
-          showToast("❌ Cupón inválido o inactivo.");
-          setAppliedCoupon(null);
-      }
-  };
-
   const showToast = (message) => { setToastMessage(message); setTimeout(() => { setToastMessage(null); }, 3000); };
   const navigateTo = (view, dept = null) => { setCurrentView(view); if(dept) setActiveFilter({dept, cat: 'all'}); setIsMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   
@@ -294,8 +276,6 @@ export default function Home() {
   
   const calculateTotal = (cartData = cart) => {
       let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
-      if (appliedCoupon) { subtotal = subtotal * (1 - (appliedCoupon.discount / 100)); } 
-      
       let envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
       return subtotal + envio;
   };
@@ -377,10 +357,6 @@ export default function Home() {
     });
     
     let subtotalFinal = subtotalCalc;
-    if (appliedCoupon) {
-        subtotalFinal = subtotalCalc * (1 - (appliedCoupon.discount / 100));
-        msg += `\n🎟️ *CUPÓN:* ${appliedCoupon.code} (-${appliedCoupon.discount}% OFF)\n`;
-    }
 
     msg += `\n*Subtotal:* ${CONFIG.currencySymbol}${formatPrice(subtotalFinal)}`;
     
@@ -430,7 +406,7 @@ export default function Home() {
                 deliveryDate: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryDate : null,
                 deliveryTime: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryTime : null,
                 shippingCost: costoEnvioAgregado,
-                couponUsed: appliedCoupon ? appliedCoupon.code : null,
+                couponUsed: null,
                 status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
                 createdAt: serverTimestamp() 
             }).catch(e => console.error(e)); 
@@ -678,21 +654,22 @@ export default function Home() {
             </div>
         )}
         
-        </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-        <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
+        </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
               
               {deliveryMethod === 'retiro' && (
                 <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 mt-4">
-                  <div className="w-full h-[200px] rounded-xl overflow-hidden border border-gray-200 shadow-sm relative">
+                  <div className="w-full h-[200px] rounded-xl overflow-hidden border border-gray-200 shadow-sm relative bg-[#f2f2f2] flex items-center justify-center">
+                    <div className="absolute flex flex-col items-center justify-center text-gray-400 gap-2">
+                      <i className="fas fa-circle-notch fa-spin text-[#fcdb00] text-2xl"></i>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Cargando mapa...</span>
+                    </div>
                     <iframe 
                       width="100%" 
                       height="100%" 
                       frameBorder="0" 
-                      style={{ border: 0 }}
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3285.4988771439265!2d-58.44856008423692!3d-34.56627066299104!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bcb5c6c21e649d%3A0x67bdc650e41f173!2sMi%C3%B1ones%202061%2C%20C1428%20Cdad.%20Aut%C3%B3noma%20de%20Buenos%20Aires!5e0!3m2!1ses-419!2sar!4v1715000000000!5m2!1ses-419!2sar" 
+                      style={{ border: 0, position: 'relative', zIndex: 10 }}
+                      src="https://maps.google.com/maps?q=Mi%C3%B1ones%202061,%20Belgrano,%20CABA&t=&z=15&ie=UTF8&iwloc=&output=embed" 
                       allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
                     ></iframe>
                   </div>
                   <div className="bg-[#fcdb00]/10 border border-[#fcdb00] p-4 rounded-xl flex items-center gap-3">
