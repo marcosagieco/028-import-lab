@@ -366,20 +366,20 @@ export default function Home() {
     msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
+        msg += `\n*LOGÍSTICA:* Retiro \n`;
     } else {
         msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
         
         if (shippingType === 'flash') {
-            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
+            msg += `*LOGÍSTICA:*  Flash (30 mins)\n`;
         } else {
-            msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
+            msg += `*LOGÍSTICA:*  Motomensajería\n`;
             if (paymentMethod === 'transferencia') {
-                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
-                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
+                msg += ` *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+                msg += `\nAdjunto mi comprobante de pago a continuación `;
             } else {
-                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
+                msg += ` *Método de pago:* Efectivo contra entrega\n`;
             }
         }
     }
