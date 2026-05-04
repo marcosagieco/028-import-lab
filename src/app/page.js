@@ -13,7 +13,8 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "028import.bell", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentName: "Lucio Bunge", // <-- NOMBRE DEL TITULAR
 };
 
 const AVAILABLE_ICONS = [
@@ -366,20 +367,20 @@ export default function Home() {
     msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* Retiro \n`;
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
     } else {
         msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
         
         if (shippingType === 'flash') {
-            msg += `*LOGÍSTICA:*  Flash (30 mins)\n`;
+            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
         } else {
-            msg += `*LOGÍSTICA:*  Motomensajería\n`;
+            msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
             if (paymentMethod === 'transferencia') {
-                msg += ` *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
-                msg += `\nAdjunto mi comprobante de pago a continuación `;
+                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
+                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
             } else {
-                msg += ` *Método de pago:* Efectivo contra entrega\n`;
+                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
             }
         }
     }
@@ -668,15 +669,17 @@ export default function Home() {
                       height="100%" 
                       frameBorder="0" 
                       style={{ border: 0 }}
-                      src="https://maps.google.com/maps?q=Mi%C3%B1ones%20y%20Juramento,%20Belgrano,%20CABA&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3285.4988771439265!2d-58.44856008423692!3d-34.56627066299104!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bcb5c6c21e649d%3A0x67bdc650e41f173!2sMi%C3%B1ones%202061%2C%20C1428%20Cdad.%20Aut%C3%B3noma%20de%20Buenos%20Aires!5e0!3m2!1ses-419!2sar!4v1715000000000!5m2!1ses-419!2sar" 
                       allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
                     ></iframe>
                   </div>
                   <div className="bg-[#fcdb00]/10 border border-[#fcdb00] p-4 rounded-xl flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
                     <div className="flex flex-col">
-                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones y Juramento</span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos los detalles exactos al confirmar.</span>
+                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones 2061</span>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos el depto exacto al confirmar.</span>
                     </div>
                   </div>
                 </div>
@@ -769,10 +772,15 @@ export default function Home() {
               </div>
               <div className="bg-[#f2f2f2] p-5 rounded-2xl border border-gray-200 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#fcdb00]"></div>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 font-poppins"><i className="fas fa-university text-[#fcdb00] mr-1"></i> Transferir al ALIAS:</p>
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                  <span className="font-bebas text-2xl text-[#111111] tracking-wider truncate">{CONFIG.paymentAlias}</span>
-                  <button onClick={copyAliasToClipboard} className="w-10 h-10 bg-[#f2f2f2] rounded-lg flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex-shrink-0"><i className="fas fa-copy"></i></button>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 font-poppins"><i className="fas fa-university text-[#fcdb00] mr-1"></i> Transferir a:</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <span className="font-bebas text-2xl text-[#111111] tracking-wider truncate">{CONFIG.paymentAlias}</span>
+                    <button onClick={copyAliasToClipboard} className="w-10 h-10 bg-[#f2f2f2] rounded-lg flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex-shrink-0"><i className="fas fa-copy"></i></button>
+                  </div>
+                  <div className="bg-gray-200/50 p-2.5 rounded-lg border border-gray-200 text-center">
+                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest font-poppins">TITULAR: {CONFIG.paymentName}</p>
+                  </div>
                 </div>
               </div>
               <div className="space-y-3">
