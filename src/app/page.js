@@ -13,8 +13,8 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
-  paymentName: "Lucio Bunge", // <-- NOMBRE DEL TITULAR
+  paymentAlias: "tu.alias.belo", 
+  paymentName: "Lucio Bunge", 
 };
 
 const AVAILABLE_ICONS = [
@@ -86,10 +86,156 @@ const initialProducts = [
 ];
 
 const PAGE_CONTENT = {
-  terminos: { title: "Términos y Condiciones", subtitle: "Políticas Legales", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p><strong>1. Naturaleza del Servicio:</strong> 028 IMPORT opera como intermediario e importador directo de productos tecnológicos y artículos de vapeo de primera línea.</p><p><strong>2. Precios y Disponibilidad:</strong> Los valores publicados y el stock se encuentran sujetos a modificaciones sin previo aviso, derivado de la dinámica propia de la importación y las fluctuaciones cambiarias del mercado.</p><p><strong>3. Proceso y Confirmación de Compra:</strong> La selección de artículos a través de esta plataforma web representa una solicitud o intención de reserva. La transacción únicamente se considerará perfeccionada y confirmada tras la comunicación directa con nuestro equipo comercial vía WhatsApp y la posterior acreditación del pago.</p><p><strong>4. Garantías y Responsabilidad:</strong> Garantizamos la originalidad y autenticidad del 100% de nuestro catálogo. Se contempla garantía exclusiva por defectos de fabricación de origen. 028 IMPORT no asume responsabilidad alguna por daños derivados del mal uso, manipulación incorrecta o desgaste natural de los dispositivos adquiridos.</p></div>) },
-  privacidad: { title: "Política de Privacidad", subtitle: "Protección de Datos", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad. Los datos recopilados durante el proceso de reserva son utilizados estrictamente para fines logísticos y de facturación.</p></div>) },
-  pagos: { title: "Medios de Pago", subtitle: "Transacciones Seguras", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>En <strong>028 IMPORT</strong> priorizamos la seguridad, agilidad y transparencia en cada operación financiera. Con el objetivo de proteger su integridad crediticia, todas las transacciones de pago se procesan de manera externa a nuestro sitio web.</p><div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mt-4"><h3 className="font-bebas text-2xl uppercase tracking-wide mb-4 text-[#111111]">Opciones Habilitadas:</h3><ul className="space-y-4"><li><strong><i className="fas fa-university text-[#b8952a] mr-2"></i> Transferencia Bancaria (ARS/USD):</strong> Acreditación inmediata. Las coordenadas bancarias (CBU/Alias) se suministrarán exclusivamente vía WhatsApp al validar su pedido.</li><li><strong><i className="fas fa-money-bill-wave text-[#b8952a] mr-2"></i> Efectivo Contra Entrega:</strong> Modalidad disponible únicamente para logística vía Motomensajería dentro de CABA y GBA, o retiros de forma presencial en nuestro showroom.</li><li><strong><i className="fab fa-bitcoin text-[#b8952a] mr-2"></i> Criptomonedas (USDT):</strong> Operamos a través de la red TRC-20 u otras a convenir. Consulte la cotización del momento con su asesor comercial.</li></ul></div><p className="mt-6 p-4 bg-red-50 text-red-800 rounded-xl border border-red-200 text-sm"><strong>⚠️ Importante:</strong> Bajo ninguna circunstancia el personal de 028 IMPORT le solicitará los dígitos de su tarjeta de crédito, claves de seguridad o contraseñas bancarias a través de esta plataforma ni por canales no oficiales.</p></div>) },
-  arrepentimiento: { title: "Botón de Arrepentimiento", subtitle: "Devoluciones", body: (<div className="space-y-6 leading-relaxed text-sm md:text-base font-poppins"><p>Usted tiene el derecho irrevocable de cancelar su compra dentro de un plazo máximo de 10 días corridos.</p></div>) }
+  nosotros: {
+    title: "Nuestra Esencia",
+    subtitle: "Acerca de 028 IMPORT",
+    body: (
+      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
+        <p className="text-xl font-medium text-[#111111] leading-snug">En 028 IMPORT no solo entregamos productos; brindamos una experiencia de exclusividad, confianza y absoluta prioridad al tiempo de nuestros clientes.</p>
+        <p>Nacimos con el firme propósito de establecer un nuevo estándar en la importación y distribución de artículos premium. Entendemos que el lujo moderno no se trata únicamente de lo que adquieres, sino de cómo lo adquieres. Por ello, hemos diseñado un ecosistema de atención al cliente meticuloso, donde la amabilidad, la inmediatez y la transparencia son nuestros pilares innegociables.</p>
+        <p>Nuestro catálogo es el resultado de una curaduría exhaustiva. Cada marca y cada modelo que ofrecemos ha sido seleccionado bajo los más estrictos controles de calidad e idoneidad, garantizando a nuestros usuarios el acceso a lo mejor del mercado global sin intermediarios innecesarios y con la certeza de un origen 100% legítimo.</p>
+        <div className="border-l-4 border-[#fcdb00] pl-6 py-2 my-10 bg-gray-50 rounded-r-2xl">
+          <p className="italic text-gray-800 text-lg font-medium">"Creemos firmemente que el tiempo de nuestro cliente es su activo más valioso. Por eso, nuestro compromiso es la excelencia y la velocidad en cada entrega."</p>
+        </div>
+        <p>Agradecemos tu confianza y te damos la bienvenida a la experiencia 028.</p>
+      </div>
+    )
+  },
+  terminos: {
+    title: "Términos y Condiciones",
+    subtitle: "Legal & Políticas Comerciales",
+    body: (
+      <div className="space-y-8 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
+        <p>El acceso y uso de la plataforma 028 IMPORT (en adelante, "la Tienda" o "Nosotros") se rige por los presentes Términos y Condiciones. Al utilizar nuestro sitio web, usted acepta íntegramente las políticas aquí detalladas.</p>
+        
+        <div>
+          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">1. Naturaleza del Servicio</h3>
+          <p>028 IMPORT opera como un catálogo virtual interactivo. Los productos añadidos a la "Bolsa de Compras" no constituyen una reserva legal de inventario ni una transacción comercial finalizada. La confirmación del pedido, fijación del precio final y reserva de stock se perfecciona de manera exclusiva a través de nuestro canal oficial de WhatsApp, mediado por un asesor de ventas.</p>
+        </div>
+
+        <div>
+          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">2. Precios y Disponibilidad</h3>
+          <p>Nos esforzamos por mantener nuestro catálogo actualizado en tiempo real. No obstante, debido a fluctuaciones arancelarias y dinámicas del mercado de importación, los precios publicados tienen carácter referencial. 028 IMPORT se reserva el derecho de modificar los precios sin previo aviso antes de la confirmación formal del pago.</p>
+        </div>
+
+        <div>
+          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">3. Garantía de Originalidad</h3>
+          <p>Garantizamos de manera absoluta la autenticidad y el origen legítimo de todos los artículos comercializados. Todo producto es entregado en su embalaje original y con los sellos de seguridad correspondientes emitidos por el fabricante.</p>
+        </div>
+
+        <div>
+          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">4. Política de Cambios y Garantías</h3>
+          <p>Dado el carácter personal y consumible de gran parte de nuestro catálogo, no se aceptarán cambios ni devoluciones por motivos de "insatisfacción" o error en la elección del sabor/modelo una vez que el precinto de seguridad haya sido vulnerado. Solo se admitirán reclamos por defectos técnicos de fabricación, los cuales deberán ser notificados dentro de las 48 horas posteriores a la recepción, adjuntando evidencia visual.</p>
+        </div>
+      </div>
+    )
+  },
+  privacidad: {
+    title: "Política de Privacidad",
+    subtitle: "Protección de Datos Personales",
+    body: (
+      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
+        <p className="text-lg font-medium text-[#111111]">En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad.</p>
+        <p>La presente Política de Privacidad describe cómo recopilamos, utilizamos y protegemos los datos que usted nos proporciona, en estricto cumplimiento con la Ley de Protección de los Datos Personales (Nº 25.326) de la República Argentina.</p>
+        
+        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Recopilación de Información</h3>
+        <p>A través de nuestra plataforma, podemos solicitar datos básicos como su nombre y datos de domicilio/ubicación (para envíos). No procesamos ni almacenamos datos financieros, bancarios ni tarjetas de crédito en nuestros servidores.</p>
+        
+        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Uso Exclusivo de los Datos</h3>
+        <p>La información recolectada se utiliza con los siguientes fines exclusivos:</p>
+        <ul className="list-disc pl-5 space-y-2 mt-2">
+          <li>Gestión logística y coordinación efectiva de las entregas.</li>
+          <li>Comunicación directa vía WhatsApp para confirmación de pedidos.</li>
+        </ul>
+
+        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">No Divulgación a Terceros</h3>
+        <p>028 IMPORT garantiza que bajo ninguna circunstancia comercializará, alquilará ni compartirá su base de datos de clientes con entidades externas, agencias de publicidad o terceros no involucrados en la cadena logística de su pedido.</p>
+      </div>
+    )
+  },
+  envios: {
+    title: "Envíos y Entregas",
+    subtitle: "Logística Premium",
+    body: (
+      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
+        <p className="text-lg font-medium text-[#111111]">Sabemos que la inmediatez es fundamental. Por ello, hemos diseñado un esquema logístico ágil, seguro y adaptado a sus necesidades.</p>
+        
+        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
+          <h3 className="text-[#fcdb00] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-bolt"></i> Envío Flash</h3>
+          <p className="text-sm">Para zonas seleccionadas, ofrecemos un servicio de entrega en menos de 30 minutos abonando mediante transferencia bancaria. Ideal para quienes necesitan sus productos de forma inmediata.</p>
+        </div>
+
+        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
+          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-motorcycle"></i> Motomensajería Programada</h3>
+          <p className="text-sm">Contamos con un servicio propio de motomensajería con salidas organizadas en dos turnos fijos (13:00hs y 18:00hs). Esto nos permite garantizar un tiempo de entrega predecible y seguro. Aboná con efectivo o transferencia.</p>
+        </div>
+
+        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
+          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-store"></i> Retiro Local</h3>
+          <p className="text-sm">Si prefiere gestionar el retiro de manera personal, lo esperamos en nuestro punto de entrega en Miñones y Juramento (Belgrano, CABA). Le informaremos por WhatsApp las instrucciones exactas al confirmar el pedido.</p>
+        </div>
+      </div>
+    )
+  },
+  pagos: {
+    title: "Medios de Pago",
+    subtitle: "Transacciones Seguras",
+    body: (
+      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
+        <p>Con el objetivo de garantizar su seguridad y ofrecerle flexibilidad, en 028 IMPORT procesamos los pagos por fuera de la plataforma web, evitando que usted deba ingresar datos sensibles en línea.</p>
+        
+        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-4">Alternativas Disponibles:</h3>
+        
+        <ul className="space-y-4">
+          <li className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-[#111111]"><i className="fas fa-university text-[#fcdb00]"></i></div>
+            <div>
+              <p className="font-bold text-[#111111]">Transferencia Bancaria (ARS)</p>
+              <p className="text-sm mt-1">Acreditación rápida mediante CBU/CVU o Alias. La app le mostrará nuestro Alias oficial durante el proceso de compra (Titular: Lucio Bunge).</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-[#111111]"><i className="fas fa-money-bill-wave text-[#fcdb00]"></i></div>
+            <div>
+              <p className="font-bold text-[#111111]">Efectivo</p>
+              <p className="text-sm mt-1">Disponible para la modalidad de Retiro Local o envío mediante nuestra Motomensajería (Pago contra entrega).</p>
+            </div>
+          </li>
+        </ul>
+
+        <div className="border-t border-gray-200 pt-6 mt-8">
+          <p className="text-xs uppercase tracking-widest font-black text-gray-400 mb-2">Aviso de Seguridad</p>
+          <p className="text-sm">Bajo ninguna circunstancia el personal de 028 IMPORT le solicitará los dígitos de su tarjeta de crédito, claves de seguridad o contraseñas bancarias a través de esta plataforma ni por canales no oficiales.</p>
+        </div>
+      </div>
+    )
+  },
+  arrepentimiento: {
+    title: "Botón de Arrepentimiento",
+    subtitle: "Marco Legal y Devoluciones",
+    body: (
+      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
+        <p>En cumplimiento con las disposiciones de la Dirección Nacional de Defensa del Consumidor, 028 IMPORT pone a su disposición las directrices para la revocación de compra.</p>
+        
+        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Plazo Legal</h3>
+        <p>Usted tiene el derecho irrevocable de cancelar su compra dentro de un plazo máximo de <strong>10 (diez) días corridos</strong> contados desde la fecha de recepción del producto en su domicilio o desde el retiro en sucursal.</p>
+
+        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Condiciones Innegociables para Aceptación</h3>
+        <p>Dada la naturaleza de los productos comercializados en nuestro catálogo (artículos de consumo personal e higiene), la devolución será aceptada pura y exclusivamente si se cumplen los siguientes requisitos de manera estricta:</p>
+        <ul className="list-disc pl-5 space-y-2 mt-2">
+          <li>El producto debe encontrarse en <strong>estado impecable, inmaculado y totalmente sin uso</strong>.</li>
+          <li>Los sellos térmicos, precintos de fábrica y plásticos protectores deben estar <strong>intactos y sin alteraciones</strong>.</li>
+          <li>El packaging o cajas no deben presentar roturas, marcas ni abolladuras.</li>
+        </ul>
+
+        <div className="bg-red-50 text-red-800 p-4 rounded-xl mt-6 border border-red-100 text-sm">
+          <strong>IMPORTANTE:</strong> Por normativas sanitarias, si un dispositivo electrónico de consumo o esencia ha sido abierto, encendido o sus sellos han sido rotos, se perderá automáticamente el derecho a devolución por arrepentimiento.
+        </div>
+
+        <p className="mt-8">Para iniciar el trámite, le solicitamos contactarse inmediatamente a nuestra línea de WhatsApp informando su número de pedido y adjuntando fotografías del estado del producto.</p>
+      </div>
+    )
+  }
 };
 
 export default function Home() {
@@ -415,12 +561,6 @@ export default function Home() {
         setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
     } catch (e) { window.location.href = whatsappUrl; setIsSending(false); }
   };
-
-  const copyAliasToClipboard = () => {
-    navigator.clipboard.writeText(CONFIG.paymentAlias);
-    showToast("✅ ALIAS copiado al portapapeles");
-  };
-
   const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
     const inCart = cart.find(i => i.id === p.id);
     const isOutOfStock = p.inStock === false;
@@ -501,8 +641,6 @@ export default function Home() {
           animation: marquee 60s linear infinite;
           will-change: transform;
         }
-        
-        /* --- SOLUCIÓN AL ZOOM MOLESTO EN CELULARES --- */
         @media screen and (max-width: 768px) {
           input, select, textarea {
             font-size: 16px !important;
@@ -567,10 +705,10 @@ export default function Home() {
         </div>
         <button onClick={() => { setShowShippingCalculatorModal(true); setIsMenuOpen(false); }} className="w-full bg-[#fcdb00] text-[#111111] p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#111111] hover:text-[#fcdb00] transition-all flex justify-center items-center gap-3 mb-2"><i className="fas fa-motorcycle text-lg"></i> Calcular Envío</button>
         <button onClick={() => { setActiveFilter({dept:'all', cat:'all'}); navigateTo('catalog'); }} className="text-left p-5 bg-white rounded-2xl shadow-sm border border-[#f2f2f2] font-black uppercase text-sm hover:border-[#fcdb00] hover:shadow-md flex justify-between items-center transition-all">Catálogo Completo <i className="fas fa-arrow-right text-[#fcdb00]"></i></button><div className="pt-6 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Departamentos</p></div>{departments.map(dept => { const isExpanded = expandedDept === dept; const deptCats = Array.from(new Set(products.filter(p => p.department === dept).map(p => p.category))); return (<div key={dept} className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] overflow-hidden transition-all"><button onClick={() => setExpandedDept(isExpanded ? null : dept)} className="w-full text-left p-5 font-black uppercase text-sm flex justify-between items-center transition-colors group">{dept} <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-gray-300 group-hover:text-[#fcdb00] transition-colors`}></i></button><div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}><div className="bg-gray-50 flex flex-col pb-4 pt-2 border-t border-gray-100"><button onClick={() => { setActiveFilter({dept, cat: 'all'}); navigateTo('catalog'); }} className="text-left px-6 py-3 font-black text-xs text-[#111111] uppercase hover:text-[#fcdb00] transition-colors flex items-center gap-2"><i className="fas fa-layer-group text-gray-400"></i> Ver todo en {dept}</button>{deptCats.map(cat => (<button key={cat} onClick={() => { setActiveFilter({dept, cat}); navigateTo('catalog'); setTimeout(() => { const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }, 300); }} className="text-left px-6 py-3 font-bold text-xs text-gray-500 uppercase hover:text-[#111111] transition-colors pl-12 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-gray-300 before:rounded-full before:absolute before:left-7 before:top-1/2 before:-translate-y-1/2 hover:before:bg-[#fcdb00]">{cat}</button>))}</div></div></div>); })}<div className="pt-8 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Información Útil</p></div><div className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] p-2 space-y-1">
-          <button onClick={() => { window.location.href = 'https://028import.com/nosotros'; }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-users"></i></div> Quiénes Somos</button>
-          <button onClick={() => { window.location.href = 'https://028import.com/envios'; }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-truck"></i></div> Envíos y Logística</button>
-          <button onClick={() => {setCurrentView('pagos'); setIsMenuOpen(false); window.scrollTo(0,0);}} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-credit-card"></i></div> Medios de Pago</button>
-          <button onClick={() => {setCurrentView('terminos'); setIsMenuOpen(false); window.scrollTo(0,0);}} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-gray-400"><i className="fas fa-file-contract"></i></div> Legales y Términos</button>
+          <button onClick={() => { navigateTo('nosotros'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-users"></i></div> Quiénes Somos</button>
+          <button onClick={() => { navigateTo('envios'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-truck"></i></div> Envíos y Logística</button>
+          <button onClick={() => { navigateTo('pagos'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-credit-card"></i></div> Medios de Pago</button>
+          <button onClick={() => { navigateTo('terminos'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-gray-400"><i className="fas fa-file-contract"></i></div> Legales y Términos</button>
         </div></div></div></div></div>)}
 
       {currentView === 'home' ? (
@@ -623,8 +761,8 @@ export default function Home() {
 
       <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-auto relative z-30 rounded-t-[3rem] overflow-hidden"><div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#fcdb00] to-transparent opacity-50"></div><div className="max-w-7xl mx-auto px-8"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16 text-xs md:text-sm"><div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.4)]" /></div><p className="text-gray-400 font-medium leading-relaxed pr-4 font-poppins">Redefinimos la experiencia de compra priorizando tu tiempo y confianza.</p></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Contacto</h4><ul className="space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones y Juramento,<br/>Belgrano, CABA.</span></li></ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Información Legal</h4>
               <ul className="space-y-4 text-gray-400 font-poppins font-medium">
-                <li><a href="https://028import.com/nosotros" className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Quiénes Somos</a></li>
-                <li><a href="https://028import.com/envios" className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Logística de Envío</a></li>
+                <li><button onClick={() => navigateTo('nosotros')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Quiénes Somos</button></li>
+                <li><button onClick={() => navigateTo('envios')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Logística de Envío</button></li>
                 <li><button onClick={() => navigateTo('pagos')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Medios de Pago</button></li>
                 <li><button onClick={() => navigateTo('terminos')} className="hover:text-white transition-colors flex items-center gap-2 mt-4 pt-4 border-t border-white/10"><i className="fas fa-file-contract text-gray-600 text-[10px]"></i> Términos y Condiciones</button></li>
                 <li><button onClick={() => navigateTo('privacidad')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-shield-alt text-gray-600 text-[10px]"></i> Política de Privacidad</button></li>
