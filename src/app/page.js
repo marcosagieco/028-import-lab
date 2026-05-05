@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "028import.bell", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
+  paymentAlias: "tu.alias.belo", // <-- ACORDATE DE PONER TU ALIAS REAL ACÁ
   paymentName: "Lucio Bunge", // <-- NOMBRE DEL TITULAR
 };
 
@@ -368,7 +368,7 @@ export default function Home() {
     msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* 🏪 Retiro (Miñones & Juramento)\n`;
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
     } else {
         msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
@@ -500,7 +500,7 @@ export default function Home() {
           animation: marquee 60s linear infinite;
           will-change: transform;
         }
-
+        
         /* --- SOLUCIÓN AL ZOOM MOLESTO EN CELULARES --- */
         @media screen and (max-width: 768px) {
           input, select, textarea {
@@ -683,7 +683,7 @@ export default function Home() {
                     <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
                     <div className="flex flex-col">
                       <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones 2061</span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.</span>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos el depto exacto al confirmar.</span>
                     </div>
                   </div>
                 </div>
@@ -715,6 +715,11 @@ export default function Home() {
                         <i className="fas fa-city absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                         <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
                       </div>
+                      
+                      <div className="relative mt-1">
+                        <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                      </div>
                     </div>
                   )}
 
@@ -727,10 +732,14 @@ export default function Home() {
                         setShippingCost={setShippingCost}
                       />
                       
+                      <div className="relative mt-1">
+                        <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
+                      </div>
+                      
                       <div className="flex flex-col gap-3 mt-2">
                         <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cuándo querés recibirlo?</label>
                         
-                        {/* SELECTOR DE FECHA (PRÓXIMOS 7 DÍAS) */}
                         <div className="relative">
                           <i className="fas fa-calendar-alt absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                           <select 
@@ -745,7 +754,6 @@ export default function Home() {
                           <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[10px]"></i>
                         </div>
 
-                        {/* SELECTOR DE HORARIO (13HS O 18HS) */}
                         <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
                           <button onClick={() => setDeliveryTime('13:00')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryTime === '13:00' ? 'bg-white text-[#111111] shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
                             <i className="fas fa-sun"></i> Turno 13:00
@@ -769,11 +777,6 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                  
-                  <div className="relative mt-1">
-                    <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                  </div>
 
                 </div>
               )}
