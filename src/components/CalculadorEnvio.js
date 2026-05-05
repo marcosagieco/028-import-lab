@@ -12,8 +12,7 @@ const mapContainerStyle = {
 
 const centerLocal = { lat: -34.5562, lng: -58.4445 };
 
-// Fijate que acá agregué "setShippingCost" para comunicarnos con la bolsa
-export default function CalculadorEnvio({ address, setAddress, zone, setZone, shippingType, setShippingCost }) {
+export default function CalculadorEnvio({ address, setAddress, zone, setZone, aptDetails, setAptDetails, shippingType, setShippingCost }) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     libraries: libraries,
@@ -51,7 +50,7 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
         const service = new window.google.maps.DistanceMatrixService();
         service.getDistanceMatrix(
           {
-            origins: ["Miñones 2061, Belgrano, CABA"],
+            origins: ["Miñones y juramento, Belgrano, CABA"],
             destinations: [destinoCoords],
             travelMode: 'DRIVING',
           },
@@ -61,14 +60,12 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
               let precioPorKm = 1000;
               if (distanciaKm >= 11) precioPorKm = 900;
               
-              // MAGIA DEL REDONDEO: Calcula el precio exacto y lo redondea a la centena más cercana hacia arriba
               const costoTotalExacto = distanciaKm * precioPorKm;
               const costoTotalRedondeado = Math.ceil(costoTotalExacto / 100) * 100;
               
               setMarkerPos(destinoCoords);
               setDatosEnvio({ km: distanciaKm.toFixed(1), precio: costoTotalRedondeado });
               
-              // Le mandamos el precio a la bolsa de compras
               if (setShippingCost) setShippingCost(costoTotalRedondeado);
 
               if (map) {
@@ -107,7 +104,6 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
             defaultValue={address}
             onChange={(e) => {
               if (setAddress) setAddress(e.target.value);
-              // Si borran la dirección, ponemos el costo en 0
               if (e.target.value === '' && setShippingCost) setShippingCost(0);
             }}
             className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400"
@@ -123,6 +119,18 @@ export default function CalculadorEnvio({ address, setAddress, zone, setZone, sh
           value={zone}
           onChange={(e) => setZone && setZone(e.target.value)}
           className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400"
+        />
+      </div>
+
+      {/* --- EL INPUT DE DEPTO AHORA ESTÁ ACÁ ADENTRO, ANTES DEL MAPA --- */}
+      <div className="relative">
+        <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input 
+          type="text" 
+          placeholder="Piso / Depto / Torre (Opcional)" 
+          value={aptDetails || ''} 
+          onChange={(e) => setAptDetails && setAptDetails(e.target.value)} 
+          className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" 
         />
       </div>
 

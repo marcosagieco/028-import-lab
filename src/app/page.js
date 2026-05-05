@@ -172,7 +172,7 @@ const PAGE_CONTENT = {
 
         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
           <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-store"></i> Retiro Local</h3>
-          <p className="text-sm">Si prefiere gestionar el retiro de manera personal, lo esperamos en nuestro punto de entrega en Miñones y Juramento (Belgrano, CABA). Le informaremos por WhatsApp las instrucciones exactas al confirmar el pedido.</p>
+          <p className="text-sm">Si prefiere gestionar el retiro de manera personal, lo esperamos en nuestro punto de entrega en Miñones & Juramento (Belgrano, CABA). Le informaremos por WhatsApp las instrucciones exactas al confirmar el pedido.</p>
         </div>
       </div>
     )
@@ -574,7 +574,7 @@ export default function Home() {
     let cardStyle = {}; let sizeClasses = ''; let aspectClass = 'aspect-[4/5]'; let titleClass = 'text-[13px] md:text-[16px] leading-tight'; let priceClass = 'text-xl md:text-2xl';
 
     if (layout === 'vertical') {
-        // Optimización perfecta para celular (2 col), tablet (3 col) y PC (4 col)
+        // --- ACÁ ESTÁ LA MAGIA DE LA GRILLA RESPONSIVA PARA PC ---
         if (effectiveSize === 'normal') { sizeClasses = 'w-[calc(50%-6px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] flex-shrink-0'; } 
         else if (effectiveSize === 'medium') { sizeClasses = 'w-full md:w-[calc(66.666%-14px)] lg:w-[calc(50%-10px)] flex-shrink-0'; titleClass = 'text-[15px] md:text-lg leading-tight'; priceClass = 'text-2xl md:text-3xl'; } 
         else if (effectiveSize === 'large') { sizeClasses = 'w-full flex-shrink-0'; aspectClass = 'aspect-[16/9] md:aspect-[21/9]'; titleClass = 'text-xl md:text-3xl leading-tight'; priceClass = 'text-3xl md:text-4xl'; }
@@ -724,7 +724,6 @@ export default function Home() {
             )}
         </div>
         
-        {/* BOTÓN CALCULAR ENVÍO DESTACADO */}
         <button onClick={() => { setShowShippingCalculatorModal(true); setIsMenuOpen(false); }} className="w-full bg-[#fcdb00] text-[#111111] p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#111111] hover:text-[#fcdb00] transition-all flex justify-center items-center gap-3 mb-2"><i className="fas fa-motorcycle text-lg"></i> Calcular Envío</button>
         
         <button onClick={() => { setActiveFilter({dept:'all', cat:'all'}); navigateTo('catalog'); }} className="text-left p-5 bg-white rounded-2xl shadow-sm border border-[#f2f2f2] font-black uppercase text-sm hover:border-[#fcdb00] hover:shadow-md flex justify-between items-center transition-all">Catálogo Completo <i className="fas fa-arrow-right text-[#fcdb00]"></i></button><div className="pt-6 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Departamentos</p></div>{departments.map(dept => { const isExpanded = expandedDept === dept; const deptCats = Array.from(new Set(products.filter(p => p.department === dept).map(p => p.category))); return (<div key={dept} className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] overflow-hidden transition-all"><button onClick={() => setExpandedDept(isExpanded ? null : dept)} className="w-full text-left p-5 font-black uppercase text-sm flex justify-between items-center transition-colors group">{dept} <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-gray-300 group-hover:text-[#fcdb00] transition-colors`}></i></button><div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}><div className="bg-gray-50 flex flex-col pb-4 pt-2 border-t border-gray-100"><button onClick={() => { setActiveFilter({dept, cat: 'all'}); navigateTo('catalog'); }} className="text-left px-6 py-3 font-black text-xs text-[#111111] uppercase hover:text-[#fcdb00] transition-colors flex items-center gap-2"><i className="fas fa-layer-group text-gray-400"></i> Ver todo en {dept}</button>{deptCats.map(cat => (<button key={cat} onClick={() => { setActiveFilter({dept, cat}); navigateTo('catalog'); setTimeout(() => { const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }, 300); }} className="text-left px-6 py-3 font-bold text-xs text-gray-500 uppercase hover:text-[#111111] transition-colors pl-12 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-gray-300 before:rounded-full before:absolute before:left-7 before:top-1/2 before:-translate-y-1/2 hover:before:bg-[#fcdb00]">{cat}</button>))}</div></div></div>); })}
@@ -783,7 +782,7 @@ export default function Home() {
       ) : currentView === 'catalog' ? (
         <>
           <div className="bg-white/80 backdrop-blur-2xl sticky top-[72px] z-40 border-b border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] pt-3 pb-3 transition-all duration-300"><div className="max-w-7xl mx-auto px-4 md:px-8"><div className="flex items-center gap-3 mb-3"><button onClick={() => navigateTo('home')} className="text-gray-400 hover:text-[#111111] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5"><i className="fas fa-home"></i> Inicio</button><span className="text-gray-300 text-[10px]"><i className="fas fa-chevron-right"></i></span><span className="text-[#111111] font-bold uppercase tracking-widest text-[10px]">{activeFilter.dept !== 'all' ? activeFilter.dept : 'CATÁLOGO COMPLETO'}</span></div>{uniqueCategories.length > 0 && (
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2 mask-image-gradient pr-8">
+            <div className="flex flex-wrap md:flex-nowrap md:overflow-x-auto gap-2.5 py-2 md:mask-image-gradient md:pr-8 justify-center md:justify-start">
               <button onClick={() => {setActiveFilter({...activeFilter, cat: 'all'}); window.scrollTo({top: 0, behavior: 'smooth'});}} className={`whitespace-nowrap px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeFilter.cat === 'all' ? 'bg-[#111111] text-[#fcdb00] shadow-md' : 'bg-white border border-[#f2f2f2] text-gray-500 hover:bg-gray-50'}`}>Todos</button>
               {uniqueCategories.map(cat => (
                 <button key={cat} onClick={() => { setActiveFilter({...activeFilter, cat: cat}); const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }} className={`whitespace-nowrap px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex-shrink-0 ${activeFilter.cat === cat ? 'bg-[#111111] text-[#fcdb00] shadow-md' : 'bg-white border border-[#f2f2f2] text-gray-500 hover:bg-gray-50'}`}>{cat}</button>
@@ -796,7 +795,7 @@ export default function Home() {
 
       <nav className="md:hidden fixed bottom-0 w-full bg-[#f2f2f2]/90 backdrop-blur-3xl border-t border-white shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40 pb-safe pt-2 px-2"><div className="flex justify-around items-center h-16 max-w-md mx-auto"><button onClick={() => navigateTo('home')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='home' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-home text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Inicio</span></button><button onClick={() => navigateTo('catalog')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='catalog' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-th-large text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Catálogo</span></button><button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center justify-center gap-1 w-full h-full text-[#111111] relative active:scale-95 transition-transform"><div className="relative bg-[#111111] w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"><i className="fas fa-shopping-bag text-lg text-white"></i>{getTotalItems() > 0 && <span className="absolute -top-1.5 -right-1.5 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm border border-[#111111]">{getTotalItems()}</span>}</div><span className="text-[9px] font-bebas uppercase tracking-wider mt-0.5">Bolsa</span></button></div></nav>
 
-      <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-auto relative z-30 rounded-t-[3rem] overflow-hidden"><div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#fcdb00] to-transparent opacity-50"></div><div className="max-w-7xl mx-auto px-8"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16 text-xs md:text-sm"><div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.4)]" /></div><p className="text-gray-400 font-medium leading-relaxed pr-4 font-poppins">Redefinimos la experiencia de compra priorizando tu tiempo y confianza.</p></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Contacto</h4><ul className="space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones y Juramento,<br/>Belgrano, CABA.</span></li></ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Información Legal</h4>
+      <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-auto relative z-30 rounded-t-[3rem] overflow-hidden"><div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#fcdb00] to-transparent opacity-50"></div><div className="max-w-7xl mx-auto px-8"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16 text-xs md:text-sm"><div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.4)]" /></div><p className="text-gray-400 font-medium leading-relaxed pr-4 font-poppins">Redefinimos la experiencia de compra priorizando tu tiempo y confianza.</p></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Contacto</h4><ul className="space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones & Juramento,<br/>Belgrano, CABA.</span></li></ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Información Legal</h4>
               <ul className="space-y-4 text-gray-400 font-poppins font-medium">
                 <li><button onClick={() => navigateTo('nosotros')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Quiénes Somos</button></li>
                 <li><button onClick={() => navigateTo('envios')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Logística de Envío</button></li>
@@ -859,7 +858,7 @@ export default function Home() {
                   <div className="bg-[#fcdb00]/10 border border-[#fcdb00] p-4 rounded-xl flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
                     <div className="flex flex-col">
-                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones 2061</span>
+                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones & Juramento</span>
                       <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos el depto exacto al confirmar.</span>
                     </div>
                   </div>
@@ -907,12 +906,9 @@ export default function Home() {
                         zone={zone} setZone={setZone}
                         shippingType={shippingType}
                         setShippingCost={setShippingCost}
+                        aptDetails={aptDetails}
+                        setAptDetails={setAptDetails}
                       />
-                      
-                      <div className="relative mt-1">
-                        <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      </div>
                       
                       <div className="flex flex-col gap-3 mt-2">
                         <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cuándo querés recibirlo?</label>
@@ -1027,6 +1023,8 @@ export default function Home() {
                   zone={zone} setZone={setZone}
                   shippingType="moto"
                   setShippingCost={setShippingCost}
+                  aptDetails={aptDetails}
+                  setAptDetails={setAptDetails}
               />
               <button onClick={() => setShowShippingCalculatorModal(false)} className="w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] py-4 rounded-xl font-bebas text-xl uppercase tracking-wider transition-all shadow-lg active:scale-95">Listo</button>
             </div>
