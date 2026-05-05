@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", 
+  paymentAlias: "028import.bell", 
   paymentName: "Lucio Bunge", 
 };
 
@@ -515,7 +515,7 @@ export default function Home() {
     msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en depósito\n`;
     } else {
         msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
