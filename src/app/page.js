@@ -13,7 +13,7 @@ const CONFIG = {
   bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
   currencySymbol: "$",
   shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "028import.bell", 
+  paymentAlias: "tu.alias.belo", 
   paymentName: "Lucio Bunge", 
 };
 
@@ -33,6 +33,19 @@ const AVAILABLE_ICONS = [
 
 const DEPT_ICONS = [
   { id: 'fa-box', prefix: 'fas' }, { id: 'fa-wind', prefix: 'fas' }, { id: 'fa-leaf', prefix: 'fas' }, { id: 'fa-microchip', prefix: 'fas' }, { id: 'fa-star', prefix: 'fas' }, { id: 'fa-fire', prefix: 'fas' }, { id: 'fa-apple', prefix: 'fab' }, { id: 'fa-mobile-alt', prefix: 'fas' }, { id: 'fa-laptop', prefix: 'fas' }, { id: 'fa-gamepad', prefix: 'fas' }, { id: 'fa-headphones', prefix: 'fas' }, { id: 'fa-gem', prefix: 'fas' }, { id: 'fa-tag', prefix: 'fas' }, { id: 'fa-cannabis', prefix: 'fas' }, { id: 'fa-smoking', prefix: 'fas' },
+];
+
+const ROULETTE_PRIZES = [
+  { id: 'sigue1', text: 'SEGUÍ PARTICIPANDO', prob: 0.085, type: 'none', value: 0, textC: '#fcdb00' }, 
+  { id: 'off5_1', text: '5% OFF', prob: 0.17, type: 'percent', value: 5, textC: '#111111' }, 
+  { id: 'off10_1', text: '10% OFF', prob: 0.195, type: 'percent', value: 10, textC: '#fcdb00' }, 
+  { id: 'sigue2', text: 'SEGUÍ PARTICIPANDO', prob: 0.085, type: 'none', value: 0, textC: '#111111' }, 
+  { id: 'off5_2', text: '5% OFF', prob: 0.17, type: 'percent', value: 5, textC: '#fcdb00' }, 
+  { id: 'off10_2', text: '10% OFF', prob: 0.195, type: 'percent', value: 10, textC: '#111111' }, 
+  { id: 'off15', text: '15% OFF', prob: 0.07, type: 'percent', value: 15, textC: '#fcdb00' }, 
+  { id: 'off20', text: '20% OFF', prob: 0.015, type: 'percent', value: 20, textC: '#111111' }, 
+  { id: 'off30', text: '30% OFF', prob: 0.00, type: 'percent', value: 30, textC: '#fcdb00' }, 
+  { id: 'envio', text: 'ENVÍO GRATIS', prob: 0.015, type: 'shipping', value: 0, textC: '#111111' }, 
 ];
 
 const initialProducts = [
@@ -93,11 +106,9 @@ const PAGE_CONTENT = {
       <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
         <p className="text-xl font-medium text-[#111111] leading-snug">En 028 IMPORT no solo entregamos productos; brindamos una experiencia de exclusividad, confianza y absoluta prioridad al tiempo de nuestros clientes.</p>
         <p>Nacimos con el firme propósito de establecer un nuevo estándar en la importación y distribución de artículos premium. Entendemos que el lujo moderno no se trata únicamente de lo que adquieres, sino de cómo lo adquieres. Por ello, hemos diseñado un ecosistema de atención al cliente meticuloso, donde la amabilidad, la inmediatez y la transparencia son nuestros pilares innegociables.</p>
-        <p>Nuestro catálogo es el resultado de una curaduría exhaustiva. Cada marca y cada modelo que ofrecemos ha sido seleccionado bajo los más estrictos controles de calidad e idoneidad, garantizando a nuestros usuarios el acceso a lo mejor del mercado global sin intermediarios innecesarios y con la certeza de un origen 100% legítimo.</p>
         <div className="border-l-4 border-[#fcdb00] pl-6 py-2 my-10 bg-gray-50 rounded-r-2xl">
           <p className="italic text-gray-800 text-lg font-medium">"Creemos firmemente que el tiempo de nuestro cliente es su activo más valioso. Por eso, nuestro compromiso es la excelencia y la velocidad en cada entrega."</p>
         </div>
-        <p>Agradecemos tu confianza y te damos la bienvenida a la experiencia 028.</p>
       </div>
     )
   },
@@ -106,26 +117,10 @@ const PAGE_CONTENT = {
     subtitle: "Legal & Políticas Comerciales",
     body: (
       <div className="space-y-8 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p>El acceso y uso de la plataforma 028 IMPORT (en adelante, "la Tienda" o "Nosotros") se rige por los presentes Términos y Condiciones. Al utilizar nuestro sitio web, usted acepta íntegramente las políticas aquí detalladas.</p>
-        
+        <p>El acceso y uso de la plataforma 028 IMPORT se rige por los presentes Términos y Condiciones. Al utilizar nuestro sitio web, usted acepta íntegramente las políticas aquí detalladas.</p>
         <div>
           <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">1. Naturaleza del Servicio</h3>
-          <p>028 IMPORT opera como un catálogo virtual interactivo. Los productos añadidos a la "Bolsa de Compras" no constituyen una reserva legal de inventario ni una transacción comercial finalizada. La confirmación del pedido, fijación del precio final y reserva de stock se perfecciona de manera exclusiva a través de nuestro canal oficial de WhatsApp, mediado por un asesor de ventas.</p>
-        </div>
-
-        <div>
-          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">2. Precios y Disponibilidad</h3>
-          <p>Nos esforzamos por mantener nuestro catálogo actualizado en tiempo real. No obstante, debido a fluctuaciones arancelarias y dinámicas del mercado de importación, los precios publicados tienen carácter referencial. 028 IMPORT se reserva el derecho de modificar los precios sin previo aviso antes de la confirmación formal del pago.</p>
-        </div>
-
-        <div>
-          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">3. Garantía de Originalidad</h3>
-          <p>Garantizamos de manera absoluta la autenticidad y el origen legítimo de todos los artículos comercializados. Todo producto es entregado en su embalaje original y con los sellos de seguridad correspondientes emitidos por el fabricante.</p>
-        </div>
-
-        <div>
-          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">4. Política de Cambios y Garantías</h3>
-          <p>Dado el carácter personal y consumible de gran parte de nuestro catálogo, no se aceptarán cambios ni devoluciones por motivos de "insatisfacción" o error en la elección del sabor/modelo una vez que el precinto de seguridad haya sido vulnerado. Solo se admitirán reclamos por defectos técnicos de fabricación, los cuales deberán ser notificados dentro de las 48 horas posteriores a la recepción, adjuntando evidencia visual.</p>
+          <p>028 IMPORT opera como un catálogo virtual interactivo. La transacción se perfecciona de manera exclusiva a través de nuestro canal oficial de WhatsApp.</p>
         </div>
       </div>
     )
@@ -136,20 +131,6 @@ const PAGE_CONTENT = {
     body: (
       <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
         <p className="text-lg font-medium text-[#111111]">En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad.</p>
-        <p>La presente Política de Privacidad describe cómo recopilamos, utilizamos y protegemos los datos que usted nos proporciona, en estricto cumplimiento con la Ley de Protección de los Datos Personales (Nº 25.326) de la República Argentina.</p>
-        
-        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Recopilación de Información</h3>
-        <p>A través de nuestra plataforma, podemos solicitar datos básicos como su nombre y datos de domicilio/ubicación (para envíos). No procesamos ni almacenamos datos financieros, bancarios ni tarjetas de crédito en nuestros servidores.</p>
-        
-        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Uso Exclusivo de los Datos</h3>
-        <p>La información recolectada se utiliza con los siguientes fines exclusivos:</p>
-        <ul className="list-disc pl-5 space-y-2 mt-2">
-          <li>Gestión logística y coordinación efectiva de las entregas.</li>
-          <li>Comunicación directa vía WhatsApp para confirmación de pedidos.</li>
-        </ul>
-
-        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">No Divulgación a Terceros</h3>
-        <p>028 IMPORT garantiza que bajo ninguna circunstancia comercializará, alquilará ni compartirá su base de datos de clientes con entidades externas, agencias de publicidad o terceros no involucrados en la cadena logística de su pedido.</p>
       </div>
     )
   },
@@ -159,21 +140,6 @@ const PAGE_CONTENT = {
     body: (
       <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
         <p className="text-lg font-medium text-[#111111]">Sabemos que la inmediatez es fundamental. Por ello, hemos diseñado un esquema logístico ágil, seguro y adaptado a sus necesidades.</p>
-        
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
-          <h3 className="text-[#fcdb00] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-bolt"></i> Envío Flash</h3>
-          <p className="text-sm">Para zonas seleccionadas, ofrecemos un servicio de entrega en menos de 30 minutos abonando mediante transferencia bancaria. Ideal para quienes necesitan sus productos de forma inmediata.</p>
-        </div>
-
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
-          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-motorcycle"></i> Motomensajería Programada</h3>
-          <p className="text-sm">Contamos con un servicio propio de motomensajería con salidas organizadas en dos turnos fijos (13:00hs y 18:00hs). Esto nos permite garantizar un tiempo de entrega predecible y seguro. Aboná con efectivo o transferencia.</p>
-        </div>
-
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 my-6">
-          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3 flex items-center gap-2"><i className="fas fa-store"></i> Retiro Local</h3>
-          <p className="text-sm">Si prefiere gestionar el retiro de manera personal, lo esperamos en nuestro punto de entrega en Miñones & Juramento (Belgrano, CABA). Le informaremos por WhatsApp las instrucciones exactas al confirmar el pedido.</p>
-        </div>
       </div>
     )
   },
@@ -183,30 +149,6 @@ const PAGE_CONTENT = {
     body: (
       <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
         <p>Con el objetivo de garantizar su seguridad y ofrecerle flexibilidad, en 028 IMPORT procesamos los pagos por fuera de la plataforma web, evitando que usted deba ingresar datos sensibles en línea.</p>
-        
-        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-4">Alternativas Disponibles:</h3>
-        
-        <ul className="space-y-4">
-          <li className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-[#111111]"><i className="fas fa-university text-[#fcdb00]"></i></div>
-            <div>
-              <p className="font-bold text-[#111111]">Transferencia Bancaria (ARS)</p>
-              <p className="text-sm mt-1">Acreditación rápida mediante CBU/CVU o Alias. La app le mostrará nuestro Alias oficial durante el proceso de compra (Titular: Lucio Bunge).</p>
-            </div>
-          </li>
-          <li className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 text-[#111111]"><i className="fas fa-money-bill-wave text-[#fcdb00]"></i></div>
-            <div>
-              <p className="font-bold text-[#111111]">Efectivo</p>
-              <p className="text-sm mt-1">Disponible para la modalidad de Retiro Local o envío mediante nuestra Motomensajería (Pago contra entrega).</p>
-            </div>
-          </li>
-        </ul>
-
-        <div className="border-t border-gray-200 pt-6 mt-8">
-          <p className="text-xs uppercase tracking-widest font-black text-gray-400 mb-2">Aviso de Seguridad</p>
-          <p className="text-sm">Bajo ninguna circunstancia el personal de 028 IMPORT le solicitará los dígitos de su tarjeta de crédito, claves de seguridad o contraseñas bancarias a través de esta plataforma ni por canales no oficiales.</p>
-        </div>
       </div>
     )
   },
@@ -216,23 +158,6 @@ const PAGE_CONTENT = {
     body: (
       <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
         <p>En cumplimiento con las disposiciones de la Dirección Nacional de Defensa del Consumidor, 028 IMPORT pone a su disposición las directrices para la revocación de compra.</p>
-        
-        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Plazo Legal</h3>
-        <p>Usted tiene el derecho irrevocable de cancelar su compra dentro de un plazo máximo de <strong>10 (diez) días corridos</strong> contados desde la fecha de recepción del producto en su domicilio o desde el retiro en sucursal.</p>
-
-        <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mt-8 mb-2">Condiciones Innegociables para Aceptación</h3>
-        <p>Dada la naturaleza de los productos comercializados en nuestro catálogo (artículos de consumo personal e higiene), la devolución será aceptada pura y exclusivamente si se cumplen los siguientes requisitos de manera estricta:</p>
-        <ul className="list-disc pl-5 space-y-2 mt-2">
-          <li>El producto debe encontrarse en <strong>estado impecable, inmaculado y totalmente sin uso</strong>.</li>
-          <li>Los sellos térmicos, precintos de fábrica y plásticos protectores deben estar <strong>intactos y sin alteraciones</strong>.</li>
-          <li>El packaging o cajas no deben presentar roturas, marcas ni abolladuras.</li>
-        </ul>
-
-        <div className="bg-red-50 text-red-800 p-4 rounded-xl mt-6 border border-red-100 text-sm">
-          <strong>IMPORTANTE:</strong> Por normativas sanitarias, si un dispositivo electrónico de consumo o esencia ha sido abierto, encendido o sus sellos han sido rotos, se perderá automáticamente el derecho a devolución por arrepentimiento.
-        </div>
-
-        <p className="mt-8">Para iniciar el trámite, le solicitamos contactarse inmediatamente a nuestra línea de WhatsApp informando su número de pedido y adjuntando fotografías del estado del producto.</p>
       </div>
     )
   }
@@ -248,22 +173,24 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState({ dept: 'all', cat: 'all' });
   const [expandedDept, setExpandedDept] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
   const [deliveryMethod, setDeliveryMethod] = useState('retiro');
   const [shippingType, setShippingType] = useState('flash'); 
   const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
   const [shippingCost, setShippingCost] = useState(0); 
+  
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [address, setAddress] = useState('');
   const [zone, setZone] = useState('');
   const [aptDetails, setAptDetails] = useState(''); 
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [deliveryTime, setDeliveryTime] = useState('13:00');
+
   const [showTooltip, setShowTooltip] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showShippingCalculatorModal, setShowShippingCalculatorModal] = useState(false);
   
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [deliveryTime, setDeliveryTime] = useState('13:00');
-
   const [deptIcons, setDeptIcons] = useState({});
   const [user, setUser] = useState(null);
   const [dbUser, setDbUser] = useState(null); 
@@ -272,8 +199,15 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-
   const [upsellsList, setUpsellsList] = useState([]);
+
+  // --- ESTADOS RULETA HOT SALE ---
+  const [showRouletteModal, setShowRouletteModal] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [rouletteRotation, setRouletteRotation] = useState(0);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [wonPrizeData, setWonPrizeData] = useState(null);
+  const [localRoulettePrize, setLocalRoulettePrize] = useState(null);
 
   const next7Days = useMemo(() => {
     const days = [];
@@ -312,6 +246,22 @@ export default function Home() {
       const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
       return { auth: getAuth(app), db: getFirestore(app) };
     } catch (error) { return { auth: null, db: null }; }
+  }, []);
+
+  // INIT RULETA ANTI-SPAM (Se guarda en localStorage para que no moleste a cada rato)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const hasSpun = localStorage.getItem('hotSaleSpun');
+        const savedPrize = localStorage.getItem('hotSalePrize');
+        
+        if (hasSpun === 'true') {
+            setShowRouletteModal(false);
+            if (savedPrize) setLocalRoulettePrize(JSON.parse(savedPrize));
+        } else {
+            // Le damos 2 segunditos y le tiramos el pop-up a la cara
+            setTimeout(() => setShowRouletteModal(true), 2000);
+        }
+    }
   }, []);
 
   useEffect(() => {
@@ -414,6 +364,66 @@ export default function Home() {
       } catch (error) { console.error(error); showToast("Error al iniciar con Google"); }
   };
 
+  // --- LÓGICA DE RULETA HOT SALE ---
+  const fireConfetti = () => {
+    if (typeof window !== 'undefined' && window.confetti) {
+      window.confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
+    }
+  };
+
+  const handleSpinRoulette = async () => {
+      if (isSpinning) return;
+      
+      // LÓGICA DE LOGIN (Desactivada para Laboratorio)
+      /* if (!user || user.isAnonymous) {
+        handleGoogleLogin();
+        return; 
+      }
+      */
+
+      if (localStorage.getItem('hotSaleSpun') === 'true') {
+        showToast("¡Ya utilizaste tu tiro de Hot Sale!");
+        return;
+      }
+      
+      setIsSpinning(true);
+      const rand = Math.random();
+      let sum = 0;
+      let wonPrize = ROULETTE_PRIZES[0];
+      
+      for (let p of ROULETTE_PRIZES) {
+          sum += p.prob;
+          if (rand <= sum) { wonPrize = p; break; }
+      }
+
+      const extraSpins = 5 * 360; 
+      const prizeIndex = ROULETTE_PRIZES.findIndex(p => p.id === wonPrize.id);
+      const sliceAngle = 360 / ROULETTE_PRIZES.length;
+      const targetRotation = extraSpins + (360 - (prizeIndex * sliceAngle)) - (sliceAngle / 2);
+      
+      setRouletteRotation(targetRotation);
+
+      setTimeout(() => {
+          setIsSpinning(false);
+          setWonPrizeData(wonPrize);
+          setShowRouletteModal(false); 
+          setShowResultModal(true);    
+          
+          // Guardamos en LocalStorage para este laboratorio
+          localStorage.setItem('hotSaleSpun', 'true');
+          
+          if(wonPrize.type === 'none') {
+              showToast("¡Ufa! Sigue participando. 😢");
+          } else {
+              localStorage.setItem('hotSalePrize', JSON.stringify(wonPrize));
+              setLocalRoulettePrize(wonPrize);
+              showToast(`¡GANASTE! 🎉 ${wonPrize.text}`);
+              fireConfetti(); 
+          }
+      }, 5000); 
+  };
+  // ------------------------------------
+
   const showToast = (message) => { setToastMessage(message); setTimeout(() => { setToastMessage(null); }, 3000); };
   const navigateTo = (view, dept = null) => { setCurrentView(view); if(dept) setActiveFilter({dept, cat: 'all'}); setIsMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   
@@ -423,7 +433,23 @@ export default function Home() {
   
   const calculateTotal = (cartData = cart) => {
       let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
+      
+      // DESCUENTO POR RULETA HOT SALE
+      let discountAmount = 0;
+      if (localRoulettePrize && localRoulettePrize.type === 'percent') {
+          let maxPrice = 0;
+          cartData.forEach(item => { const price = item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item); if (price > maxPrice) maxPrice = price; });
+          discountAmount = maxPrice * (localRoulettePrize.value / 100);
+          subtotal -= discountAmount;
+      }
+
       let envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
+      
+      // DESCUENTO ENVÍO GRATIS HOT SALE
+      if (localRoulettePrize && localRoulettePrize.type === 'shipping' && deliveryMethod === 'envio' && shippingType === 'moto') {
+          envio = 0;
+      }
+
       return subtotal + envio;
   };
 
@@ -461,16 +487,13 @@ export default function Home() {
 
   const handleCheckout = () => {
     if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
-    
     if (deliveryMethod === 'envio') {
         if (!address.trim() || !zone.trim()) { showToast("⚠️ Completá dirección y localidad."); return; }
-        
         if (shippingType === 'moto' && paymentMethod === 'transferencia') {
             setShowPaymentModal(true);
             return;
         }
     }
-    
     executeOrder();
   };
 
@@ -505,9 +528,22 @@ export default function Home() {
     
     let subtotalFinal = subtotalCalc;
 
+    // DETALLE DEL PREMIO EN WHATSAPP
+    if (localRoulettePrize) {
+        if (localRoulettePrize.type === 'percent') {
+            msg += `\n🎰 *HOT SALE:* ${localRoulettePrize.text} aplicado al ítem más caro.\n`;
+        } else if (localRoulettePrize.type === 'shipping') {
+            msg += `\n🔥 *HOT SALE:* ¡ENVÍO GRATIS GANADO! 🔥\n`;
+        }
+    }
+
     msg += `\n*Subtotal:* ${CONFIG.currencySymbol}${formatPrice(subtotalFinal)}`;
     
     let costoEnvioAgregado = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
+    if (localRoulettePrize && localRoulettePrize.type === 'shipping' && deliveryMethod === 'envio' && shippingType === 'moto') {
+        costoEnvioAgregado = 0;
+    }
+    
     if (costoEnvioAgregado > 0) {
         msg += `\n*Costo de Envío (Moto):* ${CONFIG.currencySymbol}${formatPrice(costoEnvioAgregado)}`;
     }
@@ -515,7 +551,7 @@ export default function Home() {
     msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
     
     if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* 🏪 Retiro en depósito\n`;
+        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
     } else {
         msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
         if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
@@ -553,7 +589,7 @@ export default function Home() {
                 deliveryDate: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryDate : null,
                 deliveryTime: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryTime : null,
                 shippingCost: costoEnvioAgregado,
-                couponUsed: null,
+                couponUsed: localRoulettePrize ? localRoulettePrize.text : null,
                 status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
                 createdAt: serverTimestamp() 
             }).catch(e => console.error(e)); 
@@ -574,7 +610,6 @@ export default function Home() {
     let cardStyle = {}; let sizeClasses = ''; let aspectClass = 'aspect-[4/5]'; let titleClass = 'text-[13px] md:text-[16px] leading-tight'; let priceClass = 'text-xl md:text-2xl';
 
     if (layout === 'vertical') {
-        // --- ACÁ ESTÁ LA MAGIA DE LA GRILLA RESPONSIVA PARA PC ---
         if (effectiveSize === 'normal') { sizeClasses = 'w-[calc(50%-6px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] flex-shrink-0'; } 
         else if (effectiveSize === 'medium') { sizeClasses = 'w-full md:w-[calc(66.666%-14px)] lg:w-[calc(50%-10px)] flex-shrink-0'; titleClass = 'text-[15px] md:text-lg leading-tight'; priceClass = 'text-2xl md:text-3xl'; } 
         else if (effectiveSize === 'large') { sizeClasses = 'w-full flex-shrink-0'; aspectClass = 'aspect-[16/9] md:aspect-[21/9]'; titleClass = 'text-xl md:text-3xl leading-tight'; priceClass = 'text-3xl md:text-4xl'; }
@@ -666,6 +701,85 @@ export default function Home() {
         </div>
       )}
 
+      {/* --- NUEVO: MODAL NOTIFICACIÓN CENTRAL DE PREMIO --- */}
+      {showResultModal && wonPrizeData && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#111111]/95 backdrop-blur-xl" onClick={() => setShowResultModal(false)}></div>
+          <div className="relative bg-white p-10 rounded-[2.5rem] shadow-2xl border-4 border-[#fcdb00] text-center max-w-sm w-full animate-in zoom-in-95 duration-500">
+             <div className="text-6xl mb-4">{wonPrizeData.type === 'none' ? '😢' : '🎉'}</div>
+             <h3 className="font-bebas text-5xl uppercase mb-2 text-[#111111]">{wonPrizeData.type === 'none' ? 'UFA...' : '¡GANASTE!'}</h3>
+             <p className="text-xl font-bold text-gray-600 mb-8 uppercase tracking-widest leading-tight">{wonPrizeData.text}</p>
+             <button onClick={() => setShowResultModal(false)} className="w-full bg-[#111111] text-[#fcdb00] py-4 rounded-xl font-bebas text-2xl uppercase hover:bg-black transition-all">CONTINUAR COMPRANDO</button>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL RULETA HOT SALE --- */}
+      {showRouletteModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          {/* Bloqueo Escape: Solo cierra si no está girando */}
+          <div className="absolute inset-0 bg-[#111111]/90 backdrop-blur-sm" onClick={() => !isSpinning && setShowRouletteModal(false)}></div>
+          
+          <div className="relative w-full max-w-[480px] rounded-[2rem] shadow-2xl border border-white/20 p-8 pt-16 flex flex-col items-center animate-in zoom-in-95 duration-500 overflow-hidden bg-white">
+            
+            <img 
+              src="https://i.ibb.co/BKTk8xrW/image.png" 
+              className="absolute -top-[6%] -right-[17.5%] w-[101%] h-auto max-w-none z-0 object-contain pointer-events-none opacity-50" 
+              alt="Fondo Mascota" 
+            />
+
+            {!isSpinning && <button onClick={() => setShowRouletteModal(false)} className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm hover:bg-[#fcdb00] hover:text-[#111111] transition-colors z-30 text-gray-600"><i className="fas fa-times"></i></button>}
+            
+            <h2 className="text-4xl md:text-5xl font-bebas uppercase tracking-wide text-[#111111] mb-1 text-center relative z-30 drop-shadow-md">Ruleta Hot Sale 🔥</h2>
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-10 text-center font-poppins relative z-30 drop-shadow-md">Tirás 1 sola vez. ¡Suerte!</p>
+            
+            {/* Contenedor Ruleta */}
+            <div className="relative w-64 h-64 md:w-72 md:h-72 mb-8 mt-2 z-20 flex items-center justify-center">
+              
+              <div className="absolute inset-0 rounded-full border-[6px] border-dotted border-[#fcdb00] opacity-80 z-0 animate-[spin_20s_linear_infinite] pointer-events-none"></div>
+
+              {/* LA RULETA CON SOMBRA 3D */}
+              <div 
+                className="w-full h-full rounded-full border-[10px] border-[#111111] relative overflow-hidden z-10"
+                style={{ 
+                  background: 'conic-gradient(#111111 0deg 36deg, #fcdb00 36deg 72deg, #111111 72deg 108deg, #fcdb00 108deg 144deg, #111111 144deg 180deg, #fcdb00 180deg 216deg, #111111 216deg 252deg, #fcdb00 252deg 288deg, #111111 288deg 324deg, #fcdb00 324deg 360deg)',
+                  transform: `rotate(${rouletteRotation}deg)`, 
+                  transition: isSpinning ? 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
+                  boxShadow: 'inset 0 0 50px rgba(0,0,0,0.7)' 
+                }}
+              >
+                {ROULETTE_PRIZES.map((prize, idx) => {
+                  const angle = (360 / 10) * idx;
+                  return (
+                    <div key={idx} className="absolute inset-0" style={{ transform: `rotate(${angle + 18}deg)` }}>
+                      <div className="absolute top-0 left-0 right-0 h-1/2 flex items-start justify-center pt-4 md:pt-5">
+                        <span 
+                          className={`font-bebas uppercase whitespace-nowrap drop-shadow-sm ${prize.text.length > 12 ? 'text-[9px] md:text-[11px] tracking-normal' : 'text-[12px] md:text-[14px] tracking-wider'}`} 
+                          style={{ color: prize.textC, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                        >
+                          {prize.text}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Puntero Dedo */}
+              <img 
+                src="https://i.ibb.co/G4f7mmwn/converted.png" 
+                className="absolute top-[-60px] left-1/3 -translate-x-1/4 w-[87px] h-auto z-30 drop-shadow-xl pointer-events-none" 
+                alt="Puntero Dedo" 
+              />
+            </div>
+            
+            <button onClick={handleSpinRoulette} disabled={isSpinning} className={`w-full py-4 rounded-xl font-bebas text-2xl uppercase tracking-wider transition-all shadow-[0_10px_30px_rgba(0,0,0,0.15)] active:scale-95 flex items-center justify-center gap-2 relative z-30 ${isSpinning ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-none' : 'bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)]'}`}>
+                {isSpinning ? <><i className="fas fa-circle-notch fa-spin text-xl"></i> Girando...</> : '¡GIRAR AHORA!'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="bg-[#111111] text-white h-[72px] sticky top-0 z-50 flex items-center justify-between px-4 md:px-8 shadow-lg border-b border-white/5 transition-all duration-300">
         <div className="flex items-center gap-4">
           <button onClick={() => setIsMenuOpen(true)} className="text-2xl hover:text-[#fcdb00] transition-colors p-2 md:hidden"><i className="fas fa-bars"></i></button>
@@ -683,6 +797,12 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {/* BOTÓN RULETA PC */}
+          <button onClick={() => typeof window !== 'undefined' && localStorage.getItem('hotSaleSpun') === 'true' ? showToast("Ya utilizaste tu tiro 🎁") : setShowRouletteModal(true)} className={`hidden md:flex text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full items-center gap-2 transition-all border ${typeof window !== 'undefined' && localStorage.getItem('hotSaleSpun') === 'true' ? 'bg-white/5 text-gray-500 border-transparent' : 'bg-[#fcdb00] text-[#111111] border-[#fcdb00] hover:bg-white animate-pulse'}`}>
+              <i className="fas fa-gift text-sm"></i> Ruleta
+          </button>
+          
+          {/* LOGIN (Desactivado para lab, pero dejamos el botón por si querés re-activarlo luego)
           {!user || user.isAnonymous ? (
             <button onClick={handleGoogleLogin} className="hidden md:flex bg-white/10 hover:bg-white hover:text-[#111111] text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full items-center gap-2 transition-all border border-white/20">
                 <i className="fab fa-google"></i> Iniciar Sesión
@@ -692,6 +812,7 @@ export default function Home() {
                 <i className="fas fa-user text-sm text-[#fcdb00]"></i> Hola, {dbUser?.name?.split(' ')[0] || 'Cliente'}
             </span>
           )}
+          */}
           <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:text-[#fcdb00] transition-colors"><i className="fas fa-shopping-bag text-2xl"></i>{getTotalItems() > 0 && (<span className="absolute top-1.5 -right-1 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg border border-[#111111]">{getTotalItems()}</span>)}</button>
         </div>
       </header>
@@ -701,9 +822,9 @@ export default function Home() {
           <div className="animate-marquee whitespace-nowrap flex items-center">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-8 px-4 text-[#fcdb00] font-poppins font-bold text-[10px] md:text-xs tracking-widest uppercase">
-                <span> ENVIOS 24HS CABA/AMBA </span><span className="text-white/30">•</span>
-                 <span> 028 IMPORT </span><span className="text-white/30">•</span>
-                  <span> ATENCION PERSONALIZADA POR WHATSAPP </span><span className="text-white/30">•</span>
+                <span> 🔥 HOT SALE EXCLUSIVO - HASTA 30% OFF 🔥 </span><span className="text-white/30">•</span>
+                 <span> ENVIOS 24HS CABA/AMBA </span><span className="text-white/30">•</span>
+                  <span> 028 IMPORT </span><span className="text-white/30">•</span>
                  <span> PEDIME TE LLEGA EN 30'</span><span className="text-white/30">•</span>
               </div>
             ))}
@@ -711,20 +832,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* MENÚ MÓVIL (3 RAYITAS) */}
+      {/* MENÚ MÓVIL */}
       {isMenuOpen && (<div className="fixed inset-0 z-[90] flex"><div className="absolute inset-0 bg-[#111111]/60 backdrop-blur-md transition-opacity" onClick={() => setIsMenuOpen(false)}></div><div className="w-[85%] max-w-[380px] bg-[#f2f2f2] h-full relative z-10 animate-in slide-in-from-left duration-500 flex flex-col shadow-2xl rounded-r-[2rem] overflow-hidden"><div className="p-8 bg-[#111111] flex justify-between items-center text-white border-b border-white/10"><span className="font-bebas text-3xl tracking-wide uppercase">028<span className="text-[#fcdb00]">MENU</span></span><button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times text-lg"></i></button></div><div className="flex-1 overflow-y-auto pb-8"><div className="flex flex-col p-4 space-y-2">
         
         <div className="md:hidden mb-2">
-            {!user || user.isAnonymous ? (
-                <button onClick={handleGoogleLogin} className="w-full bg-[#111111] text-white p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#fcdb00] hover:text-[#111111] transition-all flex justify-center items-center gap-3"><i className="fab fa-google text-lg"></i> Iniciar sesión con Google</button>
-            ) : (
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col items-center gap-3">
-                    <p className="text-[10px] font-bold uppercase text-gray-500 tracking-widest text-center">Hola, {dbUser?.name?.split(' ')[0] || 'Cliente'}</p>
-                </div>
-            )}
+            {/* BOTÓN RULETA MÓVIL */}
+            <button onClick={() => { setIsMenuOpen(false); typeof window !== 'undefined' && localStorage.getItem('hotSaleSpun') === 'true' ? showToast("Ya utilizaste tu tiro 🎁") : setShowRouletteModal(true); }} className={`w-full py-4 rounded-xl font-black uppercase text-xs flex justify-center items-center gap-2 transition-all ${typeof window !== 'undefined' && localStorage.getItem('hotSaleSpun') === 'true' ? 'bg-gray-200 text-gray-500' : 'bg-[#fcdb00] text-[#111111] shadow-md animate-pulse'}`}>
+                <i className="fas fa-gift text-lg"></i> Ruleta Hot Sale
+            </button>
         </div>
         
-        <button onClick={() => { setShowShippingCalculatorModal(true); setIsMenuOpen(false); }} className="w-full bg-[#fcdb00] text-[#111111] p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#111111] hover:text-[#fcdb00] transition-all flex justify-center items-center gap-3 mb-2"><i className="fas fa-motorcycle text-lg"></i> Calcular Envío</button>
+        <button onClick={() => { setShowShippingCalculatorModal(true); setIsMenuOpen(false); }} className="w-full bg-[#111111] text-white p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#fcdb00] hover:text-[#111111] transition-all flex justify-center items-center gap-3 mb-2"><i className="fas fa-motorcycle text-lg"></i> Calcular Envío</button>
         
         <button onClick={() => { setActiveFilter({dept:'all', cat:'all'}); navigateTo('catalog'); }} className="text-left p-5 bg-white rounded-2xl shadow-sm border border-[#f2f2f2] font-black uppercase text-sm hover:border-[#fcdb00] hover:shadow-md flex justify-between items-center transition-all">Catálogo Completo <i className="fas fa-arrow-right text-[#fcdb00]"></i></button><div className="pt-6 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Departamentos</p></div>{departments.map(dept => { const isExpanded = expandedDept === dept; const deptCats = Array.from(new Set(products.filter(p => p.department === dept).map(p => p.category))); return (<div key={dept} className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] overflow-hidden transition-all"><button onClick={() => setExpandedDept(isExpanded ? null : dept)} className="w-full text-left p-5 font-black uppercase text-sm flex justify-between items-center transition-colors group">{dept} <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-gray-300 group-hover:text-[#fcdb00] transition-colors`}></i></button><div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}><div className="bg-gray-50 flex flex-col pb-4 pt-2 border-t border-gray-100"><button onClick={() => { setActiveFilter({dept, cat: 'all'}); navigateTo('catalog'); }} className="text-left px-6 py-3 font-black text-xs text-[#111111] uppercase hover:text-[#fcdb00] transition-colors flex items-center gap-2"><i className="fas fa-layer-group text-gray-400"></i> Ver todo en {dept}</button>{deptCats.map(cat => (<button key={cat} onClick={() => { setActiveFilter({dept, cat}); navigateTo('catalog'); setTimeout(() => { const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }, 300); }} className="text-left px-6 py-3 font-bold text-xs text-gray-500 uppercase hover:text-[#111111] transition-colors pl-12 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-gray-300 before:rounded-full before:absolute before:left-7 before:top-1/2 before:-translate-y-1/2 hover:before:bg-[#fcdb00]">{cat}</button>))}</div></div></div>); })}
         
@@ -837,7 +955,19 @@ export default function Home() {
             </div>
         )}
         
-        </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
+        </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
+          
+          {/* CUADRO DE PREMIO HOT SALE */}
+          {localRoulettePrize && localRoulettePrize.type !== 'none' && (
+            <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
+                <p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-ticket-alt text-[#fcdb00] text-xl"></i> Tus Beneficios</p>
+                <div className="bg-[#111111] text-[#fcdb00] p-4 rounded-xl flex items-center justify-between border border-[#fcdb00]/30 shadow-md">
+                    <div className="flex items-center gap-4"><i className="fas fa-gift text-2xl"></i><div className="flex flex-col"><span className="font-bold text-[10px] uppercase tracking-widest text-white">Premio Hot Sale Aplicado</span><span className="font-bebas text-xl leading-none mt-1">{localRoulettePrize.text}</span></div></div><i className="fas fa-check-circle text-2xl text-[#25D366]"></i>
+                </div>
+            </div>
+          )}
+
+          <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
               
               {deliveryMethod === 'retiro' && (
                 <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 mt-4">
@@ -851,7 +981,7 @@ export default function Home() {
                       height="100%" 
                       frameBorder="0" 
                       style={{ border: 0, position: 'relative', zIndex: 10 }}
-                      src="https://maps.google.com/maps?q=Mi%C3%B1ones%202061,%20Belgrano,%20CABA&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                      src="https://maps.google.com/maps?q=Mi%C3%B1ones%20y%20Juramento,%20Belgrano,%20CABA&t=&z=16&ie=UTF8&iwloc=&output=embed" 
                       allowFullScreen
                     ></iframe>
                   </div>
@@ -876,7 +1006,12 @@ export default function Home() {
                     </div>
                     <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
                       <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>Vía Motomensajería</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Horarios fijos de recorrido: 13:00 y 18:00hs.</span></div>
+                      <div className="flex flex-col">
+                        <span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>
+                          Vía Motomensajería {localRoulettePrize && localRoulettePrize.type === 'shipping' && <span className="text-white bg-green-500 px-2 py-0.5 rounded-sm text-sm ml-2">GRATIS</span>}
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Horarios fijos de recorrido: 13:00 y 18:00hs.</span>
+                      </div>
                       {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
                     </div>
                   </div>
@@ -1032,6 +1167,8 @@ export default function Home() {
         </div>
       )}
 
+      {/* SCRIPT DEL CONFETI Y FONT AWESOME */}
+      <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     </div>
   );
