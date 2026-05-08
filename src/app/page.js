@@ -731,8 +731,8 @@ export default function Home() {
           {/* Bloqueo Escape */}
           <div className="absolute inset-0 bg-[#111111]/90 backdrop-blur-md" onClick={() => !isSpinning && setShowRouletteModal(false)}></div>
           
-          {/* CONTENEDOR VIP DARK MODE */}
-          <div className="relative w-full max-w-[480px] rounded-[2rem] bg-[#0a0a0a] border border-white/10 shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(252,219,0,0.05)] p-8 pt-12 flex flex-col items-center animate-in zoom-in-95 duration-500 overflow-hidden">
+          {/* CONTENEDOR VIP DARK MODE (Gradiente de Opción 3 aplicado aquí) */}
+          <div className="relative w-full max-w-[480px] rounded-[2rem] bg-[radial-gradient(circle_at_center,#121212_0%,#0a0a0a_50%,#050505_100%)] border border-white/10 shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(252,219,0,0.05)] p-8 pt-12 flex flex-col items-center animate-in zoom-in-95 duration-500 overflow-hidden">
             
             {/* SPOTLIGHT DE ESTUDIO (Foco de luz suave detrás de la mascota) */}
             <div className="absolute -top-[5%] right-[5%] w-[250px] h-[250px] bg-white/20 blur-[80px] rounded-full pointer-events-none z-0"></div>
@@ -740,7 +740,7 @@ export default function Home() {
             {/* TU IMAGEN INTACTA */}
             <img 
               src="https://i.ibb.co/gZgzZJ35/Dise-o-sin-t-tulo-6.png" 
-              className="absolute -top-[5%] -right-[18%] w-[103%] h-auto max-w-none z-0 object-contain pointer-events-none opacity-100" 
+              className="absolute -top-[4%] -right-[18%] w-[103%] h-auto max-w-none z-0 object-contain pointer-events-none opacity-100" 
               alt="Fondo Mascota" 
             />
 
@@ -751,15 +751,18 @@ export default function Home() {
               <img 
                 src="https://i.ibb.co/kVTX09dS/Dise-o-sin-t-tulo-7.png" 
                 alt="Hot Sale 028" 
-                className="absolute top-1/2 left-1/9 -translate-x-1/3 -translate-y-[50%] w-[400px] md:w-[450px] max-w-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]" 
+                className="absolute top-1/2 left-1/9 -translate-x-1/3 -translate-y-[50%] w-[430px] md:w-[450px] max-w-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]" 
               />
             </div>
             
             
             
             {/* Contenedor Ruleta */}
-            <div className="relative w-64 h-64 md:w-72 md:h-72 mb-8 mt-2 z-20 flex items-center justify-center">
+            <div className="relative w-84 h-84 md:w-72 md:h-72 mb-8 mt-2 z-20 flex items-center justify-center">
               
+              {/* HALO GLOW AMARILLO SUAVE (Opción 1 aplicada detrás de la ruleta) */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130%] h-[130%] bg-[radial-gradient(circle,rgba(252,219,0,0.2)_0%,transparent_60%)] blur-[15px] pointer-events-none z-0"></div>
+
               {/* LA RULETA */}
               <div 
                 className="w-full h-full rounded-full border-[6px] border-[#111111] shadow-[0_15px_50px_rgba(0,0,0,0.9)] relative overflow-hidden z-10"
@@ -795,18 +798,21 @@ export default function Home() {
               {/* PUNTERO INTACTO DEL USUARIO */}
               <img 
                 src="https://i.ibb.co/G4f7mmwn/converted.png" 
-                className="absolute top-[-60px] left-1/3 -translate-x-1/4 w-[87px] h-auto z-30 drop-shadow-[25px_rgba(0,0,0,0.6)] pointer-events-none" 
+                className="absolute top-[-70px] left-1/3 -translate-x-1/5 w-[100px] h-auto z-30 drop-shadow-[25px_rgba(0,0,0,0.6)] pointer-events-none" 
                 alt="Puntero Dedo" 
               />
             </div>
             
-            {/* BOTÓN PREMIUM (Degradado, borde interno suave y física de pulsación real) */}
-            <button onClick={handleSpinRoulette} disabled={isSpinning} className={`w-full py-4 rounded-xl font-bebas text-2xl uppercase tracking-wider transition-all flex items-center justify-center gap-2 relative z-30 
+            {/* BOTÓN PREMIUM MODIFICADO (Letras grandes, sin bordes feos y con profundidad) */}
+            <button onClick={handleSpinRoulette} disabled={isSpinning} className={`w-full py-4 md:py-5 rounded-xl font-bebas text-3xl md:text-4xl uppercase tracking-wider transition-all flex items-center justify-center gap-2 relative z-30 
               ${isSpinning 
-                ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5 shadow-none' 
-                : 'bg-gradient-to-b from-[#ffea60] to-[#dfb411] text-[#111111] border-[1.5px] border-[#fffbc2] shadow-[0_6px_0_#9a7b0a,0_15px_30px_rgba(0,0,0,0.4)] hover:brightness-110 active:translate-y-[6px] active:shadow-[0_0px_0_#9a7b0a,0_0px_0_rgba(0,0,0,0)]'}`}>
-                {isSpinning ? <><i className="fas fa-circle-notch fa-spin text-xl"></i> Girando...</> : '¡GIRAR AHORA!'}
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed shadow-none' 
+                : 'bg-gradient-to-b from-[#ffea60] to-[#dfb411] text-[#111111] shadow-[0_6px_0_#9a7b0a,0_15px_30px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.5)] hover:brightness-110 active:translate-y-[6px] active:shadow-[0_0px_0_#9a7b0a,0_0px_0_rgba(0,0,0,0)]'}`}>
+                {isSpinning ? <><i className="fas fa-circle-notch fa-spin text-2xl"></i> Girando...</> : '¡PROBA SUERTE!'}
             </button>
+
+            {/* TEXTO DE URGENCIA AGREGADO (Opción 5) */}
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-4 text-center font-poppins relative z-30">1 giro por cliente • premios limitados</p>
           </div>
         </div>
       )}
