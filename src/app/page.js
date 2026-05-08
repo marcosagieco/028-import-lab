@@ -1,1201 +1,2068 @@
-"use client";
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import CalculadorEnvio from '@/components/CalculadorEnvio';
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc, setDoc, getDoc, increment, query, orderBy, limit } from "firebase/firestore";
+import {
+  Plus, Trash2, Save, TrendingUp, DollarSign, Package, UserCircle,
+  ShoppingCart, Wallet, Activity, LogOut, Moon, Sun, AlertTriangle, Calendar, Award, FolderOpen, ChevronRight, ChevronDown, Box, Users, BarChart3, CheckCircle, Clock, Settings, Truck, Home, Percent, Flame, WifiOff, Download, XCircle, Search, ArrowUpDown, Star
+} from 'lucide-react';
 
-const CONFIG = {
-  brandName: "028", 
-  whatsappNumber: "5491153412358", 
-  logoImage: "https://i.postimg.cc/jS33XBZm/028logo-convertido-de-jpeg-removebg-preview.png", 
-  bannerImage: "https://i.ibb.co/2Yg9wM6x/image.png", 
-  currencySymbol: "$",
-  shippingText: "Pedime te llega en 30'⏰",
-  paymentAlias: "tu.alias.belo", 
-  paymentName: "Lucio Bunge", 
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+
+import { initializeApp } from "firebase/app";
+import {
+  initializeFirestore, collection, addDoc, deleteDoc, doc, updateDoc, setDoc,
+  onSnapshot, query, orderBy
+} from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const AVAILABLE_ICONS = [
-  { id: 'fa-star', prefix: 'fas', color: 'text-[#fcdb00]' },     
-  { id: 'fa-fire', prefix: 'fas', color: 'text-red-500' },       
-  { id: 'fa-bolt', prefix: 'fas', color: 'text-yellow-400' },    
-  { id: 'fa-crown', prefix: 'fas', color: 'text-amber-500' },    
-  { id: 'fa-gem', prefix: 'fas', color: 'text-purple-500' },     
-  { id: 'fa-heart', prefix: 'fas', color: 'text-pink-500' },     
-  { id: 'fa-tag', prefix: 'fas', color: 'text-green-500' },      
-  { id: 'fa-gift', prefix: 'fas', color: 'text-blue-500' },      
-  { id: 'fa-rocket', prefix: 'fas', color: 'text-orange-500' },  
-  { id: 'fa-award', prefix: 'fas', color: 'text-indigo-500' },
-  { id: 'fa-apple', prefix: 'fab', color: 'text-gray-800' } 
-];
+let db;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = initializeFirestore(app, { experimentalForceLongPolling: true });
+} catch (error) {
+  console.error("Error inicializando Firebase:", error);
+}
 
-const DEPT_ICONS = [
-  { id: 'fa-box', prefix: 'fas' }, { id: 'fa-wind', prefix: 'fas' }, { id: 'fa-leaf', prefix: 'fas' }, { id: 'fa-microchip', prefix: 'fas' }, { id: 'fa-star', prefix: 'fas' }, { id: 'fa-fire', prefix: 'fas' }, { id: 'fa-apple', prefix: 'fab' }, { id: 'fa-mobile-alt', prefix: 'fas' }, { id: 'fa-laptop', prefix: 'fas' }, { id: 'fa-gamepad', prefix: 'fas' }, { id: 'fa-headphones', prefix: 'fas' }, { id: 'fa-gem', prefix: 'fas' }, { id: 'fa-tag', prefix: 'fas' }, { id: 'fa-cannabis', prefix: 'fas' }, { id: 'fa-smoking', prefix: 'fas' },
-];
+// --- UTILIDADES ---
+const formatMoney = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val || 0);
+const formatCompact = (val) => new Intl.NumberFormat('es-AR', { notation: "compact", compactDisplay: "short", maximumFractionDigits: 1 }).format(val || 0);
+const formatPercent = (val) => new Intl.NumberFormat('es-AR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format((val || 0) / 100);
 
-const ROULETTE_PRIZES = [
-  { id: 'sigue1', text: 'SEGUÍ PARTICIPANDO', prob: 0.085, type: 'none', value: 0, textC: '#fcdb00' }, 
-  { id: 'off5_1', text: '5% OFF', prob: 0.17, type: 'percent', value: 5, textC: '#111111' }, 
-  { id: 'off10_1', text: '10% OFF', prob: 0.195, type: 'percent', value: 10, textC: '#fcdb00' }, 
-  { id: 'sigue2', text: 'SEGUÍ PARTICIPANDO', prob: 0.085, type: 'none', value: 0, textC: '#111111' }, 
-  { id: 'off5_2', text: '5% OFF', prob: 0.17, type: 'percent', value: 5, textC: '#fcdb00' }, 
-  { id: 'off10_2', text: '10% OFF', prob: 0.195, type: 'percent', value: 10, textC: '#111111' }, 
-  { id: 'off15', text: '15% OFF', prob: 0.07, type: 'percent', value: 15, textC: '#fcdb00' }, 
-  { id: 'off20', text: '20% OFF', prob: 0.015, type: 'percent', value: 20, textC: '#111111' }, 
-  { id: 'off30', text: '30% OFF', prob: 0.00, type: 'percent', value: 30, textC: '#fcdb00' }, 
-  { id: 'envio', text: 'ENVÍO GRATIS', prob: 0.015, type: 'shipping', value: 0, textC: '#111111' }, 
-];
-
-const initialProducts = [
-  { id: 1, name: "BAJA SPLASH", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/76QxH9kQ/BAJA-SPLASH.png", description: "Vapeador desechable premium con una mezcla tropical y refrescante.", cardSize: "normal" },
-  { id: 2, name: "BLUE RAZZ ICE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/s2Tmw67w/BLUE-RAZZ-ICE.webp", description: "El clásico e intenso sabor a frambuesa azul combinado con un golpe helado perfecto.", cardSize: "normal" },
-  { id: 3, name: "CHERRY FUSE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/yd5PzDfx/CHERRY-FUSE.png", description: "Fusión explosiva de cerezas dulces y jugosas.", cardSize: "normal" },
-  { id: 4, name: "CHERRY STRAZZ", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "Destacado", image: "https://i.postimg.cc/7PFVsTG2/CHERRY-STRAZZ.jpg", description: "Una deliciosa combinación de cereza y fresa con sutiles notas cítricas.", cardSize: "medium" },
-  { id: 5, name: "DOUBLE APPLE ICE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/QN9mJqtk/DOUBLE-APPLE-ICE.webp", description: "Intenso sabor a doble manzana, dulce y ácida.", cardSize: "normal" },
-  { id: 6, name: "DRAGON STRAWNANA", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/9X6p8qRB/DRAGON-STRAWNANA.png", description: "Exótico mix de pitahaya, fresa y plátano.", cardSize: "normal" },
-  { id: 7, name: "GRAPE ICE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/hPV0HPTw/GRAPE-ICE.webp", description: "Auténtico sabor a uva dulce.", cardSize: "normal" },
-  { id: 8, name: "MANGO MAGIC", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "Best Seller", image: "https://i.postimg.cc/tCFzLCFC/MANGO-MAGIC.png", description: "La magia del mango maduro y jugoso.", cardSize: "normal" },
-  { id: 9, name: "PEACH", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/4xZ1Zk1f/PEACH.webp", description: "Puro sabor a durazno aterciopelado y dulce.", cardSize: "normal" },
-  { id: 10, name: "SCARY BERRY", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/K8F5FS5D/SCARY-BERRY.png", description: "Misteriosa y atrapante mezcla de bayas silvestres oscuras.", cardSize: "normal" },
-  { id: 11, name: "SOUR LUSH GUMMY", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/P54Q536R/SOUR-LUSH-GUMMY.png", description: "El divertido sabor de las gomitas dulces con un toque ácido.", cardSize: "normal" },
-  { id: 12, name: "STRAWBERRY DRAGON FRUIT", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/QMdk9QwW/STRAWBERRY-DRAGON-FRUIT.png", description: "Combinación vibrante de fresas maduras y exótica fruta del dragón.", cardSize: "normal" },
-  { id: 13, name: "STRAWBERRY ICE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/7Lt1gCrC/STRAWBERRY-ICE.png", description: "Fresas recién recolectadas bañadas en una brisa helada.", cardSize: "normal" },
-  { id: 14, name: "STRAWBERRY WATERMELON", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/MG30ycJD/STRAWBERRY-WATERMELON.webp", description: "La clásica e infalible mezcla de fresa y sandía.", cardSize: "normal" },
-  { id: 15, name: "SUMMER SPLASH", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/LXqtvHmV/SUMMER-SPLASH.png", description: "Un cóctel frutal que captura la esencia del verano en cada calada.", cardSize: "normal" },
-  { id: 16, name: "TIGERS BLOOD", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/3RyX9K3P/TIGERS-BLOOD.jpg", description: "Famosa mezcla de sandía y fresa con un exótico y suave toque de coco.", cardSize: "normal" },
-  { id: 17, name: "WATERMELON ICE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "Refrescante", image: "https://i.postimg.cc/63DdmD3s/WATERMELON-ICE.webp", description: "Todo el jugo y la dulzura de la sandía con un impacto extra helado.", cardSize: "normal" },
-  { id: 25, name: "SOUR APPLE ICE", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/X7QqQDGS/SOUR-APPLE-ICE.jpg", description: "Manzana verde crujiente y ácida envuelta en una ráfaga de frío.", cardSize: "normal" },
-  { id: 26, name: "MIAMI MINT", price: 26000, department: "VAPES", category: "Elfbar Ice King", tag: "", image: "https://i.postimg.cc/bJhqzQDS/MIAMI-MINT.jpg", description: "Menta sofisticada estilo Miami: fresca, dulce pero con presencia.", cardSize: "normal" },
-  { id: 30, name: "BLUE RAZZ LEMON", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/Jh48hT4x/ignite-v400-BLUE-RAZZ-LEMON.jpg", description: "Dispositivo ultracompacto y premium de Ignite.", cardSize: "normal" },
-  { id: 31, name: "CHERRY WATERMELON", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/nLRJ9vCd/ignite-v400-cherry-watermelon.jpg", description: "Diseño elegante característico de Ignite.", cardSize: "normal" },
-  { id: 32, name: "GRAPE", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/0QzqYbSv/ignite-v400-GRAPE.jpg", description: "Sabor a uva puro y directo.", cardSize: "normal" },
-  { id: 33, name: "MIAMI MINT", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/gJ1bNmyJ/ignite-v400-miami-mint.jpg", description: "Menta premium y refrescante en el formato más cómodo.", cardSize: "normal" },
-  { id: 34, name: "PASSION FRUIT", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/vT9FKkXt/Ignite-v400-PASSION-FRUIT.jpg", description: "El toque ácido y exótico del maracuyá en cada calada.", cardSize: "normal" },
-  { id: 35, name: "STRAWBERRY WATERMELON", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/FFJ41kmG/Ignite-v400-STRAWBERR-WATERMELON.jpg", description: "Dulce, frutal y perfectamente balanceado.", cardSize: "normal" },
-  { id: 36, name: "STRAWBERRY KIWI", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/Hsw19GrJ/ignite-v400-STRAWBERRY-KIWI.jpg", description: "Fresa dulce combinada con el toque tropical del kiwi.", cardSize: "normal" },
-  { id: 37, name: "STRAWBERRY", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/cLdyDD35/ignite-v400-strawberry.jpg", description: "Auténtico sabor a fresa de principio a fin.", cardSize: "normal" },
-  { id: 38, name: "TUTTI FRUTI", price: 28000, department: "VAPES", category: "Ignite v400", tag: "", image: "https://i.postimg.cc/mgVxKQ3v/ignite-v400-TUTI-FRUTI.jpg", description: "Explosión de golosinas frutales en un vaporizador compacto.", cardSize: "normal" },
-  { id: 39, name: "BLUE RAZZ ICE", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/yYk7mpF9/Lost-mary-20000-BLUE-RAZZ-ICE.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 40, name: "GRAPE ICE", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/wTZg05VC/Lost-mary-20000-GRAPE-ICE.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 41, name: "ICE MINT", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/wTZg05V5/lost-mary-20000-ICE-MINT.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 42, name: "LIME GRAPE FRUIT", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/7LqcVbpW/Lost-mary-20000-LIME-GRAPE-FRUIT.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 43, name: "MANGO TWIST", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/8CwYnNGc/Lost-mary-20000-MANGO-TWIST.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 44, name: "MEXICAN MANGO", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/bvL5FpPx/Lost-mary-20000-MEXICAN-MANGO.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 45, name: "MIAMI MINT", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/yWqpSNmv/Lost-mary-20000-MIAMI-MINT.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 46, name: "STRAWBERRY ICE", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/zDLJWPw3/Lost-mary-20000-STRAWBERRY-ICE.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 47, name: "STRAWBERRY KIWI", price: 23000, department: "VAPES", category: "Lost Mary 20000", tag: "", image: "https://i.postimg.cc/59Hxvk5q/Lost-mary-20000-STRAWBERRY-KIWI.jpg", description: "El dispositivo Lost Mary con 20000 caladas.", cardSize: "normal" },
-  { id: 18, name: "BLOW THC", price: 55000, department: "THC", category: "Vapes THC", tag: "Nuevo", image: "https://i.postimg.cc/x1WJwWsR/Blow-THC.webp", description: "Dispositivo de alta pureza con extracciones premium.", cardSize: "medium" },
-  { id: 19, name: "TORCH 7.5G", price: 53000, department: "THC", category: "Vapes THC", tag: "", image: "https://i.postimg.cc/hvdP1jnd/TORCH-7-5G.png", description: "Capacidad extrema de 7.5G de extracto premium.", cardSize: "normal" },
-  { id: 29, name: "TORCH 4.5G", price: 52500, department: "THC", category: "Vapes THC", tag: "Nuevo", image: "https://i.postimg.cc/vmFK42hC/TORCH-4-5G.jpg", description: "4.5G de puro rendimiento.", cardSize: "normal" },
-  { id: 20, name: "PHENOM 6G", price: 56000, department: "THC", category: "Vapes THC", tag: "Destacado", image: "https://i.postimg.cc/QMGwnJ7B/PHENOM-6G.jpg", description: "Dispositivo de grado premium cargado con 6G.", cardSize: "large" },
-  { id: 27, name: "PLAYSTATION 5", price: 550, department: "TECNOLOGÍA", category: "PlayStation", tag: "USD", image: "https://i.postimg.cc/RFGS0Wzt/PLAY-5.jpg", description: "PlayStation 5 original en caja sellada.", cardSize: "large" },
-  { id: 28, name: "AIRPODS PRO", price: 35000, department: "TECNOLOGÍA", category: "PRODUCTOS APPLE", tag: "Nuevo", image: "https://i.postimg.cc/X7gzDt0p/AIRPODS-PRO.jpg", description: "Auriculares inalámbricos originales con cancelación activa.", cardSize: "normal" },
-  { id: 21, name: "CARGADOR 20W", price: 16500, department: "TECNOLOGÍA", category: "PRODUCTOS APPLE", tag: "", image: "https://i.postimg.cc/zvy6LthF/power-adapter-20w.jpg", description: "Adaptador de corriente USB-C de 20W original Apple.", cardSize: "normal" },
-  { id: 22, name: "CARGADOR 35W", price: 20500, department: "TECNOLOGÍA", category: "PRODUCTOS APPLE", tag: "Potente", image: "https://i.postimg.cc/NFKSyJXZ/power-adapter-35w.jpg", description: "Adaptador de corriente dual USB-C de 35W original Apple.", cardSize: "normal" },
-  { id: 23, name: "CABLE USB-C A USB-C", price: 13500, department: "TECNOLOGÍA", category: "PRODUCTOS APPLE", tag: "", image: "https://i.postimg.cc/V6WZJy5B/usb-c-cable.jpg", description: "Cable original Apple de USB-C a USB-C.", cardSize: "normal" },
-  { id: 24, name: "CABLE USB-C A LIGHTNING 2M", price: 13500, department: "TECNOLOGÍA", category: "PRODUCTOS APPLE", tag: "", image: "https://i.postimg.cc/QCvPcQkg/usb-c-to-lightning-cable.jpg", description: "Cable original Apple USB-C a Lightning de 2 metros.", cardSize: "normal" }
-];
-
-const PAGE_CONTENT = {
-  nosotros: {
-    title: "Nuestra Esencia",
-    subtitle: "Acerca de 028 IMPORT",
-    body: (
-      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p className="text-xl font-medium text-[#111111] leading-snug">En 028 IMPORT no solo entregamos productos; brindamos una experiencia de exclusividad, confianza y absoluta prioridad al tiempo de nuestros clientes.</p>
-        <p>Nacimos con el firme propósito de establecer un nuevo estándar en la importación y distribución de artículos premium. Entendemos que el lujo moderno no se trata únicamente de lo que adquieres, sino de cómo lo adquieres. Por ello, hemos diseñado un ecosistema de atención al cliente meticuloso, donde la amabilidad, la inmediatez y la transparencia son nuestros pilares innegociables.</p>
-        <div className="border-l-4 border-[#fcdb00] pl-6 py-2 my-10 bg-gray-50 rounded-r-2xl">
-          <p className="italic text-gray-800 text-lg font-medium">"Creemos firmemente que el tiempo de nuestro cliente es su activo más valioso. Por eso, nuestro compromiso es la excelencia y la velocidad en cada entrega."</p>
-        </div>
-      </div>
-    )
-  },
-  terminos: {
-    title: "Términos y Condiciones",
-    subtitle: "Legal & Políticas Comerciales",
-    body: (
-      <div className="space-y-8 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p>El acceso y uso de la plataforma 028 IMPORT se rige por los presentes Términos y Condiciones. Al utilizar nuestro sitio web, usted acepta íntegramente las políticas aquí detalladas.</p>
-        <div>
-          <h3 className="text-[#111111] font-black uppercase tracking-widest text-sm mb-3">1. Naturaleza del Servicio</h3>
-          <p>028 IMPORT opera como un catálogo virtual interactivo. La transacción se perfecciona de manera exclusiva a través de nuestro canal oficial de WhatsApp.</p>
-        </div>
-      </div>
-    )
-  },
-  privacidad: {
-    title: "Política de Privacidad",
-    subtitle: "Protección de Datos Personales",
-    body: (
-      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p className="text-lg font-medium text-[#111111]">En 028 IMPORT, la salvaguarda y confidencialidad de su información personal es una absoluta prioridad.</p>
-      </div>
-    )
-  },
-  envios: {
-    title: "Envíos y Entregas",
-    subtitle: "Logística Premium",
-    body: (
-      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p className="text-lg font-medium text-[#111111]">Sabemos que la inmediatez es fundamental. Por ello, hemos diseñado un esquema logístico ágil, seguro y adaptado a sus necesidades.</p>
-      </div>
-    )
-  },
-  pagos: {
-    title: "Medios de Pago",
-    subtitle: "Transacciones Seguras",
-    body: (
-      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p>Con el objetivo de garantizar su seguridad y ofrecerle flexibilidad, en 028 IMPORT procesamos los pagos por fuera de la plataforma web, evitando que usted deba ingresar datos sensibles en línea.</p>
-      </div>
-    )
-  },
-  arrepentimiento: {
-    title: "Botón de Arrepentimiento",
-    subtitle: "Marco Legal y Devoluciones",
-    body: (
-      <div className="space-y-6 text-gray-600 leading-relaxed text-sm md:text-base font-poppins">
-        <p>En cumplimiento con las disposiciones de la Dirección Nacional de Defensa del Consumidor, 028 IMPORT pone a su disposición las directrices para la revocación de compra.</p>
-      </div>
-    )
-  }
+const safeDateStr = (dateStr, options) => {
+  if (!dateStr) return 'Sin fecha';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Fecha inv.';
+  return d.toLocaleDateString(undefined, options);
 };
 
-export default function Home() {
-  const [cart, setCart] = useState([]);
-  const [products, setProducts] = useState(initialProducts);
-  const [promos, setPromos] = useState([]);
-  const [homeSections, setHomeSections] = useState([]); 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('home'); 
-  const [activeFilter, setActiveFilter] = useState({ dept: 'all', cat: 'all' });
-  const [expandedDept, setExpandedDept] = useState(null);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  
-  const [deliveryMethod, setDeliveryMethod] = useState('retiro');
-  const [shippingType, setShippingType] = useState('flash'); 
-  const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
-  const [shippingCost, setShippingCost] = useState(0); 
-  
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [zone, setZone] = useState('');
-  const [aptDetails, setAptDetails] = useState(''); 
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [deliveryTime, setDeliveryTime] = useState('13:00');
+const safeDateTime = (dateStr) => {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+};
 
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showShippingCalculatorModal, setShowShippingCalculatorModal] = useState(false);
-  
-  const [deptIcons, setDeptIcons] = useState({});
-  const [user, setUser] = useState(null);
-  const [dbUser, setDbUser] = useState(null); 
-  const [fomoData, setFomoData] = useState(null);
-  const [isSending, setIsSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [toastMessage, setToastMessage] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [upsellsList, setUpsellsList] = useState([]);
+const exportToCSV = (filename, rows) => {
+  const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.map(item => `"${String(item).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
-  // --- ESTADOS RULETA HOT SALE ---
-  const [showRouletteModal, setShowRouletteModal] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [rouletteRotation, setRouletteRotation] = useState(0);
-  const [showResultModal, setShowResultModal] = useState(false);
-  const [wonPrizeData, setWonPrizeData] = useState(null);
-  
-  const [localRoulettePrize, setLocalRoulettePrize] = useState(null);
-  const [hasSpunLocal, setHasSpunLocal] = useState(false);
+const getTodayDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
-  const next7Days = useMemo(() => {
-    const days = [];
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const dateString = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' });
-      const formatted = dateString.charAt(0).toUpperCase() + dateString.slice(1);
-      days.push({
-         value: date.toISOString().split('T')[0],
-         label: i === 0 ? `Hoy (${formatted})` : i === 1 ? `Mañana (${formatted})` : formatted
-      });
-    }
-    return days;
-  }, []);
+const getPreviousDayStr = (dateStr) => {
+  const [y, m, d] = dateStr.split('-');
+  const date = new Date(y, m - 1, d, 12, 0, 0);
+  date.setDate(date.getDate() - 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 
-  useEffect(() => {
-    if (next7Days.length > 0 && !deliveryDate) {
-        setDeliveryDate(next7Days[0].value);
-    }
-  }, [next7Days, deliveryDate]);
+// --- NORMALIZADOR DE VENDEDORES ---
+const normalizeSellerName = (name) => {
+  if (!name) return "028 Import";
+  const lower = name.toLowerCase().trim();
+  if (lower === "marcos" || lower === "028import" || lower === "028 import") return "028 Import";
+  if (lower === "b" || lower === "buono") return "Buono";
+  return name;
+};
 
-  const departments = useMemo(() => [...new Set(products.map(p => p.department).filter(Boolean))], [products]);
-  const uniqueCategories = useMemo(() => {
-    if (activeFilter.dept !== 'all') return [...new Set(products.filter(p => p.department === activeFilter.dept).map(p => p.category))];
-    return [...new Set(products.map(p => p.category))];
-  }, [products, activeFilter.dept]);
+// --- COMPONENTES UI ---
+const Card = ({ children, className = '', darkMode }) => (
+  <div className={`rounded-xl border shadow-sm transition-colors duration-200 ${
+    darkMode ? 'bg-[#0f1115] border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+  } ${className}`}>
+    {children}
+  </div>
+);
 
-  const slugify = (text) => text.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');            
-
-  const firebaseRefs = useMemo(() => {
-    if (typeof window === "undefined") return { auth: null, db: null };
-    try {
-      const firebaseConfig = { apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY, authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID };
-      const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-      return { auth: getAuth(app), db: getFirestore(app) };
-    } catch (error) { return { auth: null, db: null }; }
-  }, []);
-
-  // INIT RULETA ANTI-SPAM (Modo Laboratorio: F5 reinicia) y SOLUCIÓN HYDRATION
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem('hotSaleSpun');
-        localStorage.removeItem('hotSalePrize');
-        setLocalRoulettePrize(null);
-        setHasSpunLocal(false);
-        setTimeout(() => setShowRouletteModal(true), 1500);
-    }
-  }, []);
-
-  useEffect(() => {
-    const showTimer = setTimeout(() => setShowTooltip(true), 2500);
-    const hideTimer = setTimeout(() => setShowTooltip(false), 9000);
-    return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
-  }, []);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => { if (entry.isIntersecting) entry.target.classList.add("is-visible"); });
-      }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" } 
-    );
-    const timeoutId = setTimeout(() => {
-        const elements = document.querySelectorAll('.reveal-on-scroll');
-        elements.forEach((el) => observer.observe(el));
-    }, 100);
-    return () => { clearTimeout(timeoutId); observer.disconnect(); }
-  }, [currentView, activeFilter, products, searchTerm, homeSections]);
-
-  const isFirstLoad = useRef(true);
-  useEffect(() => {
-    if (!firebaseRefs.db) return;
-    const qFomo = query(collection(firebaseRefs.db, 'orders'), orderBy('createdAt', 'desc'), limit(1));
-    const unsubscribeFomo = onSnapshot(qFomo, (snap) => {
-        if (isFirstLoad.current) { isFirstLoad.current = false; return; }
-        snap.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const o = change.doc.data();
-                if (o.clientName && o.items?.length > 0) {
-                    const firstName = o.clientName.split(' ')[0]; 
-                    setFomoData({ name: firstName, product: o.items[0].name });
-                    setTimeout(() => setFomoData(null), 6000);
-                }
-            }
-        });
-    });
-    return () => unsubscribeFomo();
-  }, [firebaseRefs.db]);
-
-  useEffect(() => {
-    const handleFocus = () => setIsSending(false);
-    window.addEventListener('focus', handleFocus); window.addEventListener('pageshow', handleFocus);
-    if (firebaseRefs.auth && firebaseRefs.db) {
-      const unsubscribeAuth = onAuthStateChanged(firebaseRefs.auth, (u) => {
-        setUser(u);
-        if (!u) { signInAnonymously(firebaseRefs.auth).catch(console.error); }
-      });
-      const unsubscribeStock = onSnapshot(collection(firebaseRefs.db, 'products'), (snapshot) => {
-        if (!snapshot.empty) {
-          const dbProducts = snapshot.docs.map(doc => ({ dbId: doc.id, ...doc.data() }));
-          setProducts(prev => {
-             const combined = [...initialProducts];
-             dbProducts.forEach(dbItem => {
-                const index = combined.findIndex(p => p.id == dbItem.id);
-                if (dbItem.isHidden || dbItem.isDeleted) { if (index > -1) combined.splice(index, 1); }
-                else { if (index > -1) combined[index] = { ...combined[index], ...dbItem }; else combined.push(dbItem); }
-             });
-             return combined.sort((a, b) => (a.order || 99) - (b.order || 99));
-          });
-        }
-      });
-      const unsubscribePromos = onSnapshot(collection(firebaseRefs.db, 'promos'), (s) => setPromos(!s.empty ? s.docs.map(d => ({ id: d.id, ...d.data() })) : []));
-      const unsubscribeHomeSections = onSnapshot(collection(firebaseRefs.db, 'home_sections'), (s) => setHomeSections(!s.empty ? s.docs.map(d => ({ dbId: d.id, ...d.data() })).sort((a, b) => a.order - b.order) : []));
-      const unsubscribeDeptIcons = onSnapshot(doc(firebaseRefs.db, 'settings', 'departments'), (snap) => {
-        if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
-      });
-      const unsubscribeUpsells = onSnapshot(collection(firebaseRefs.db, 'upsells'), (snap) => {
-        setUpsellsList(!snap.empty ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : []);
-      });
-
-      return () => { unsubscribeAuth(); unsubscribeStock(); unsubscribePromos(); unsubscribeHomeSections(); unsubscribeDeptIcons(); unsubscribeUpsells(); window.removeEventListener('focus', handleFocus); window.removeEventListener('pageshow', handleFocus); };
-    }
-  }, [firebaseRefs]);
-
-  useEffect(() => {
-      if (!user || user.isAnonymous || !firebaseRefs.db) return;
-      const unsubscribe = onSnapshot(doc(firebaseRefs.db, 'users', user.uid), (docSnap) => {
-          if (docSnap.exists()) {
-              const data = docSnap.data();
-              setDbUser(data);
-              if(data.name) setClientName(data.name);
-          }
-      });
-      return () => unsubscribe();
-  }, [user, firebaseRefs.db]);
-
-  const handleGoogleLogin = async () => {
-      if (!firebaseRefs.auth || !firebaseRefs.db) return;
-      try {
-          const provider = new GoogleAuthProvider();
-          const result = await signInWithPopup(firebaseRefs.auth, provider);
-          const u = result.user;
-          const userRef = doc(firebaseRefs.db, 'users', u.uid);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) {
-              await setDoc(userRef, { name: u.displayName, email: u.email, photoURL: u.photoURL, createdAt: serverTimestamp() });
-          }
-          showToast("¡Sesión iniciada con éxito! 🎉");
-      } catch (error) { console.error(error); showToast("Error al iniciar con Google"); }
+const MetricCard = ({ title, value, subtitle, icon: Icon, trend, color = 'zinc', darkMode }) => {
+  const colorStyles = {
+    blue: darkMode ? 'bg-blue-900/10 border-blue-900/50 hover:bg-blue-900/20 hover:border-blue-800' : 'bg-blue-50/80 border-blue-200 hover:bg-blue-100/50 hover:border-blue-300',
+    emerald: darkMode ? 'bg-emerald-900/10 border-emerald-900/50 hover:bg-emerald-900/20 hover:border-emerald-800' : 'bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100/50 hover:border-emerald-300',
+    rose: darkMode ? 'bg-rose-900/10 border-rose-900/50 hover:bg-rose-900/20 hover:border-rose-800' : 'bg-rose-50/80 border-rose-200 hover:bg-rose-100/50 hover:border-rose-300',
+    amber: darkMode ? 'bg-amber-900/10 border-amber-900/50 hover:bg-amber-900/20 hover:border-amber-800' : 'bg-amber-50/80 border-amber-200 hover:bg-amber-100/50 hover:border-amber-300',
+    violet: darkMode ? 'bg-violet-900/10 border-violet-900/50 hover:bg-violet-900/20 hover:border-violet-800' : 'bg-violet-50/80 border-violet-200 hover:bg-violet-100/50 hover:border-violet-300',
+    indigo: darkMode ? 'bg-indigo-900/10 border-indigo-900/50 hover:bg-indigo-900/20 hover:border-indigo-800' : 'bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100/50 hover:border-indigo-300',
+    zinc: darkMode ? 'bg-[#0f1115] border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-200 hover:border-zinc-300',
   };
 
-  // --- LÓGICA DE CONFETI (CORREGIDA: Corto, elegante, flotante) ---
-  const fireConfetti = () => {
-    if (typeof window !== 'undefined' && window.confetti) {
-      const defaults = {
-        origin: { y: 0.7 }, // Nace desde un poco más abajo y sube
-        colors: ['#fcdb00', '#ffffff', '#111111', '#eab308'],
-        zIndex: 9999,
-        gravity: 0.5, // Cae mucho más lento, dando efecto de flotar
-        scalar: 1.1,
-        ticks: 200 // Dura el tiempo justo, no es eterno
-      };
-      
-      // Disparo único y explosivo central hacia arriba/lados
-      window.confetti({
-        ...defaults,
-        particleCount: 120,
-        spread: 100,
-        startVelocity: 35
-      });
-      
-      // Segundo disparo chiquito casi inmediato para dar "capas" o volumen
-      setTimeout(() => {
-        window.confetti({
-          ...defaults,
-          particleCount: 60,
-          spread: 120,
-          startVelocity: 25
-        });
-      }, 150);
-    }
-  };
-
-  const handleSpinRoulette = async () => {
-      if (isSpinning) return;
-      
-      if (hasSpunLocal) {
-        showToast("¡Ya utilizaste tu tiro de Hot Sale!");
-        return;
-      }
-      
-      setIsSpinning(true);
-      const rand = Math.random();
-      let sum = 0;
-      let wonPrize = ROULETTE_PRIZES[0];
-      
-      for (let p of ROULETTE_PRIZES) {
-          sum += p.prob;
-          if (rand <= sum) { wonPrize = p; break; }
-      }
-
-      const extraSpins = 5 * 360; 
-      const prizeIndex = ROULETTE_PRIZES.findIndex(p => p.id === wonPrize.id);
-      const sliceAngle = 360 / ROULETTE_PRIZES.length;
-      const targetRotation = extraSpins + (360 - (prizeIndex * sliceAngle)) - (sliceAngle / 2);
-      
-      setRouletteRotation(targetRotation);
-
-      setTimeout(() => {
-          setIsSpinning(false);
-          setWonPrizeData(wonPrize);
-          setShowRouletteModal(false); 
-          setShowResultModal(true);    
-          
-          localStorage.setItem('hotSaleSpun', 'true');
-          setHasSpunLocal(true);
-          
-          if(wonPrize.type === 'none') {
-              showToast("¡Ufa! Sigue participando. 😢");
-          } else {
-              localStorage.setItem('hotSalePrize', JSON.stringify(wonPrize));
-              setLocalRoulettePrize(wonPrize);
-              showToast(`¡GANASTE! 🎉 ${wonPrize.text}`);
-              fireConfetti(); // Confeti premium instantáneo
-          }
-      }, 4000); 
-  };
-
-  const showToast = (message) => { setToastMessage(message); setTimeout(() => { setToastMessage(null); }, 3000); };
-  const navigateTo = (view, dept = null) => { setCurrentView(view); if(dept) setActiveFilter({dept, cat: 'all'}); setIsMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  
-  const formatPrice = (n) => n ? n.toLocaleString('es-AR') : '0';
-  const getTotalItems = () => cart.reduce((acc, item) => acc + item.qty, 0);
-  const getUnitPromoPrice = (item) => { const promo = promos.find(p => p.category === item.category); if (promo) { const catCount = cart.filter(i => i.category === item.category).reduce((acc, curr) => acc + curr.qty, 0); if (catCount >= promo.minQty) return promo.totalPrice / promo.minQty; } return item.price; };
-  
-  const calculateTotal = (cartData = cart) => {
-      let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
-      
-      let discountAmount = 0;
-      if (localRoulettePrize && localRoulettePrize.type === 'percent') {
-          let maxPrice = 0;
-          cartData.forEach(item => { const price = item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item); if (price > maxPrice) maxPrice = price; });
-          discountAmount = maxPrice * (localRoulettePrize.value / 100);
-          subtotal -= discountAmount;
-      }
-
-      let envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
-      
-      if (localRoulettePrize && localRoulettePrize.type === 'shipping' && deliveryMethod === 'envio' && shippingType === 'moto') {
-          envio = 0;
-      }
-
-      return subtotal + envio;
-  };
-
-  const addToCart = async (product, e) => { 
-    if(e) e.stopPropagation(); 
-    if (product.inStock === false) return; 
-
-    setCart(prev => { 
-        const existing = prev.find(item => item.id === product.id); 
-        if (existing) return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item); 
-        return [...prev, { ...product, qty: 1 }]; 
-    }); 
-    showToast(`✅ Añadido: ${product.name}`); 
-    if(selectedProduct) setSelectedProduct(null); 
-
-    if (firebaseRefs.db) {
-      try { 
-          setDoc(doc(firebaseRefs.db, 'products', `prod_${product.id}`), { clicks: increment(1) }, { merge: true }).catch(e => console.error(e)); 
-      } catch (err) { console.error(err); }
-    }
-  };
-  
-  const changeQty = (id, delta) => { setCart(prev => prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)); };
-
-  const handleAddUpsellToCart = (upsell) => {
-      const prod = products.find(p => p.id == upsell.productId);
-      if (!prod) return;
-      setCart(prev => {
-          const existing = prev.find(item => item.id === prod.id);
-          if (existing) return prev.map(item => item.id === prod.id ? { ...item, qty: item.qty + 1, isUpsell: true, upsellPrice: Number(upsell.price) } : item);
-          return [...prev, { ...prod, qty: 1, isUpsell: true, upsellPrice: Number(upsell.price) }];
-      });
-      showToast(`✅ Oferta agregada: ${prod.name}`);
-  };
-
-  const handleCheckout = () => {
-    if (!clientName.trim() || !clientPhone.trim()) { showToast("⚠️ Completá tu Nombre y Teléfono."); return; }
-    if (deliveryMethod === 'envio') {
-        if (!address.trim() || !zone.trim()) { showToast("⚠️ Completá dirección y localidad."); return; }
-        if (shippingType === 'moto' && paymentMethod === 'transferencia') {
-            setShowPaymentModal(true);
-            return;
-        }
-    }
-    executeOrder();
-  };
-
-  const executeOrder = async () => {
-    setShowPaymentModal(false);
-    setIsSending(true);
-    let currentCart = [...cart];
-    const finalTotal = calculateTotal(currentCart);
-
-    let msg = `Hola *${CONFIG.brandName}*, mi pedido:\n\n`;
-    
-    if (deliveryMethod === 'retiro') {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido para *RETIRAR LOCAL*:\n\n`;
-    } else if (deliveryMethod === 'envio' && shippingType === 'flash') {
-        msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido con *ENVÍO FLASH*. ¿Me pasás los datos para transferir?\n\n`;
-    } else if (deliveryMethod === 'envio' && shippingType === 'moto') {
-        if (paymentMethod === 'transferencia') {
-            msg = `Hola *${CONFIG.brandName}*, acabo de transferir por mi pedido:\n\n`;
-        } else {
-            msg = `Hola *${CONFIG.brandName}*, quiero hacer un pedido y *pago en efectivo* al recibir:\n\n`;
-        }
-    }
-    
-    msg += `*Resumen de Productos:*\n`;
-    let subtotalCalc = 0;
-    currentCart.forEach(i => { 
-        const price = i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i);
-        subtotalCalc += (i.qty * price);
-        if (i.isUpsell) { msg += `- ${i.qty}x ${i.name} (OFERTA: $${formatPrice(price)})\n`; } 
-        else { msg += `- ${i.qty}x ${i.name} ($${formatPrice(price)} c/u)\n`; }
-    });
-    
-    let subtotalFinal = subtotalCalc;
-
-    if (localRoulettePrize) {
-        if (localRoulettePrize.type === 'percent') {
-            msg += `\n🎰 *HOT SALE:* ${localRoulettePrize.text} aplicado al ítem más caro.\n`;
-        } else if (localRoulettePrize.type === 'shipping') {
-            msg += `\n🔥 *HOT SALE:* ¡ENVÍO GRATIS GANADO! 🔥\n`;
-        }
-    }
-
-    msg += `\n*Subtotal:* ${CONFIG.currencySymbol}${formatPrice(subtotalFinal)}`;
-    
-    let costoEnvioAgregado = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
-    if (localRoulettePrize && localRoulettePrize.type === 'shipping' && deliveryMethod === 'envio' && shippingType === 'moto') {
-        costoEnvioAgregado = 0;
-    }
-    
-    if (costoEnvioAgregado > 0) {
-        msg += `\n*Costo de Envío (Moto):* ${CONFIG.currencySymbol}${formatPrice(costoEnvioAgregado)}`;
-    }
-    
-    msg += `\n*TOTAL A PAGAR: ${CONFIG.currencySymbol}${formatPrice(finalTotal)}*\n`;
-    
-    if (deliveryMethod === 'retiro') {
-        msg += `\n*LOGÍSTICA:* 🏪 Retiro en Showroom\n`;
-    } else {
-        msg += `\n*ENTREGA:* ${address}, ${zone}\n`;
-        if (aptDetails.trim()) msg += `*DEPTO/PISO:* ${aptDetails.trim()}\n`; 
-        
-        if (shippingType === 'flash') {
-            msg += `*LOGÍSTICA:* 🚀 Flash (30 mins)\n`;
-        } else {
-            msg += `*LOGÍSTICA:* 🛵 Motomensajería\n`;
-            
-            const selectedLabel = next7Days.find(d => d.value === deliveryDate)?.label || deliveryDate;
-            msg += `📅 *Día:* ${selectedLabel}\n`;
-            msg += `⏰ *Turno:* ${deliveryTime} hs\n`;
-
-            if (paymentMethod === 'transferencia') {
-                msg += `🏦 *Transferido al Alias:* ${CONFIG.paymentAlias}\n`;
-                msg += `\nAdjunto mi comprobante de pago a continuación 👇`;
-            } else {
-                msg += `💵 *Método de pago:* Efectivo contra entrega\n`;
-            }
-        }
-    }
-    
-    const whatsappUrl = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
-    try { 
-        if (firebaseRefs.db) { 
-            addDoc(collection(firebaseRefs.db, 'orders'), { 
-                userId: user?.uid || "anon", clientName, clientPhone, 
-                items: currentCart.map(i => ({ name: i.name, qty: i.qty, price: i.isUpsell ? i.upsellPrice : getUnitPromoPrice(i) })), 
-                total: finalTotal, delivery: deliveryMethod, 
-                address: deliveryMethod === 'envio' ? address : '', 
-                zone: deliveryMethod === 'envio' ? zone : '', 
-                aptDetails: deliveryMethod === 'envio' ? aptDetails.trim() : '', 
-                shippingOption: deliveryMethod === 'envio' ? shippingType : null,
-                paymentMethod: deliveryMethod === 'envio' && shippingType === 'moto' ? paymentMethod : null,
-                deliveryDate: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryDate : null,
-                deliveryTime: deliveryMethod === 'envio' && shippingType === 'moto' ? deliveryTime : null,
-                shippingCost: costoEnvioAgregado,
-                couponUsed: localRoulettePrize ? localRoulettePrize.text : null,
-                status: (deliveryMethod === 'envio' && shippingType === 'moto' && paymentMethod === 'transferencia') ? 'pending_verification' : 'pending', 
-                createdAt: serverTimestamp() 
-            }).catch(e => console.error(e)); 
-        } 
-        setTimeout(() => { window.location.href = whatsappUrl; setIsSending(false); }, 400); 
-    } catch (e) { window.location.href = whatsappUrl; setIsSending(false); }
-  };
-
-  const copyAliasToClipboard = () => {
-    navigator.clipboard.writeText(CONFIG.paymentAlias);
-    showToast("✅ ALIAS copiado al portapapeles");
-  };
-  const renderProductCard = (p, index, isVidriera = false, layout = 'horizontal') => {
-    const inCart = cart.find(i => i.id === p.id);
-    const isOutOfStock = p.inStock === false;
-    const effectiveSize = isVidriera ? (p.cardSize || 'normal') : 'normal';
-
-    let cardStyle = {}; let sizeClasses = ''; let aspectClass = 'aspect-[4/5]'; let titleClass = 'text-[13px] md:text-[16px] leading-tight'; let priceClass = 'text-xl md:text-2xl';
-
-    if (layout === 'vertical') {
-        if (effectiveSize === 'normal') { sizeClasses = 'w-[calc(50%-6px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] flex-shrink-0'; } 
-        else if (effectiveSize === 'medium') { sizeClasses = 'w-full md:w-[calc(66.666%-14px)] lg:w-[calc(50%-10px)] flex-shrink-0'; titleClass = 'text-[15px] md:text-lg leading-tight'; priceClass = 'text-2xl md:text-3xl'; } 
-        else if (effectiveSize === 'large') { sizeClasses = 'w-full flex-shrink-0'; aspectClass = 'aspect-[16/9] md:aspect-[21/9]'; titleClass = 'text-xl md:text-3xl leading-tight'; priceClass = 'text-3xl md:text-4xl'; }
-    } else {
-        if (effectiveSize === 'normal') { sizeClasses = 'w-[160px] md:w-[200px] flex-shrink-0'; } 
-        else if (effectiveSize === 'medium') { sizeClasses = 'w-[230px] md:w-[280px] flex-shrink-0'; titleClass = 'text-[15px] md:text-lg leading-tight'; priceClass = 'text-2xl md:text-3xl'; } 
-        else if (effectiveSize === 'large') { sizeClasses = 'w-[320px] md:w-[480px] flex-shrink-0'; aspectClass = 'aspect-[16/9]'; titleClass = 'text-xl md:text-3xl leading-tight'; priceClass = 'text-3xl md:text-4xl'; }
-    }
-
-    return (
-      <div key={p.id} style={{ transitionDelay: `${(index % 4) * 75}ms`, ...cardStyle }} className={`reveal-on-scroll bg-white border border-[#f2f2f2] shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[1.5rem] overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] snap-start group ${isOutOfStock ? 'opacity-70 grayscale' : ''} ${sizeClasses}`}>
-        <div className={`relative ${aspectClass} overflow-hidden bg-[#f2f2f2]/50 cursor-pointer rounded-t-[1.5rem]`} onClick={() => setSelectedProduct(p)}>
-          <img src={p.image} alt={p.name} className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700 ease-out" />
-          {isOutOfStock ? ( <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm flex items-center justify-center"><span className="bg-red-600 text-white font-bebas text-sm px-4 py-1.5 rounded-sm uppercase tracking-wider shadow-lg">SIN STOCK</span></div> ) : p.tag && ( <span className="absolute top-3 left-3 bg-[#111111] text-[#fcdb00] font-bebas text-[11px] px-3 py-1 uppercase rounded-sm shadow-md tracking-wider">{p.tag}</span> )}
-        </div>
-        <div className="p-4 flex-grow flex flex-col"><p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mb-1.5 font-poppins">{p.category}</p><h3 className={`font-bebas ${titleClass} uppercase mb-1 text-[#111111] line-clamp-2 tracking-wide`}>{p.name}</h3>
-          <div className="mt-auto pt-3"><p className={`text-[#fcdb00] font-bebas ${priceClass} mb-4 tracking-wide drop-shadow-sm`}>{CONFIG.currencySymbol}{formatPrice(p.price)}</p>
-            {isOutOfStock ? ( <button disabled className="w-full bg-[#f2f2f2] text-gray-400 py-3 font-bebas text-[14px] uppercase tracking-wider rounded-xl cursor-not-allowed">Agotado</button> ) : inCart ? (
-              <div className="flex items-center justify-between bg-[#fcdb00] text-[#111111] h-11 rounded-xl font-bold px-1.5 shadow-md"><button className="w-12 h-full flex items-center justify-center hover:text-black transition-colors" onClick={() => changeQty(p.id, -1)}><i className="fas fa-minus text-xs"></i></button><span className="font-bebas text-lg pt-1">{inCart.qty}</span><button className="w-12 h-full flex items-center justify-center hover:text-black transition-colors" onClick={() => addToCart(p)}><i className="fas fa-plus text-xs"></i></button></div>
-            ) : ( <button onClick={(e) => addToCart(p, e)} className="w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] py-3 font-bebas text-[16px] uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center justify-center gap-2"><i className="fas fa-shopping-bag text-xs mb-0.5"></i> comprar ahora</button> )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const renderProductSection = (category) => {
-    let sectionProducts = products.filter(p => p.category === category);
-    if (activeFilter.dept !== 'all') sectionProducts = sectionProducts.filter(p => p.department === activeFilter.dept);
-    if (searchTerm) sectionProducts = sectionProducts.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.category.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (sectionProducts.length === 0) return null;
-    const promo = promos.find(p => p.category === category); let promoText = null;
-    if (promo) promoText = `${promo.minQty}+ un: $${formatPrice(promo.totalPrice / promo.minQty)} c/u`;
-    return (
-      <section key={category} id={slugify(category)} className="mb-20 scroll-mt-40 reveal-on-scroll">
-        <div className="flex flex-col md:flex-row justify-between items-baseline mb-8 gap-3 border-b-2 border-[#f2f2f2] pb-4"><h2 className="text-3xl md:text-5xl font-bebas text-[#111111] tracking-wide uppercase relative">{category} <span className="absolute -bottom-[18px] left-0 w-16 h-1 bg-[#fcdb00] rounded-full"></span></h2>{promoText && <div className="bg-[#fcdb00]/20 text-[#111111] px-4 py-2 font-bebas text-lg rounded-full uppercase tracking-wider flex items-center gap-2"><i className="fas fa-tag text-[#fcdb00] mb-0.5"></i> {promoText}</div>}</div>
-        <div className="flex flex-wrap gap-3 md:gap-5">{sectionProducts.map((p, index) => renderProductCard(p, index, false, 'vertical'))}</div>
-      </section>
-    );
-  };
-
-  const renderLegalPage = () => {
-    const pageData = PAGE_CONTENT[currentView]; if (!pageData) return null;
-    return (<div className="min-h-screen py-16 px-4 md:py-24"><div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-2xl p-8 md:p-16 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white animate-in fade-in slide-in-from-bottom-8 duration-700"><button onClick={() => navigateTo('home')} className="mb-10 text-[#111111] hover:text-[#fcdb00] transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest font-poppins"><i className="fas fa-arrow-left"></i> Volver a la Tienda</button><div className="text-center mb-16"><span className="text-[#fcdb00] font-bebas uppercase tracking-widest text-lg mb-2 block drop-shadow-sm">{pageData.subtitle}</span><h1 className="text-5xl md:text-6xl font-bebas text-[#111111] uppercase tracking-wide">{pageData.title}</h1><div className="w-24 h-1.5 bg-[#fcdb00] mx-auto mt-6 rounded-full"></div></div><div className="prose prose-gray max-w-none font-poppins">{pageData.body}</div></div></div>);
+  const iconColors = {
+    blue: darkMode ? 'text-blue-400 bg-blue-500/20' : 'text-blue-600 bg-blue-200/50',
+    emerald: darkMode ? 'text-emerald-400 bg-emerald-500/20' : 'text-emerald-700 bg-emerald-200/50',
+    rose: darkMode ? 'text-rose-400 bg-rose-500/20' : 'text-rose-600 bg-rose-200/50',
+    amber: darkMode ? 'text-amber-400 bg-amber-500/20' : 'text-amber-600 bg-amber-200/50',
+    violet: darkMode ? 'text-violet-400 bg-violet-500/20' : 'text-violet-600 bg-violet-200/50',
+    indigo: darkMode ? 'text-indigo-400 bg-indigo-500/20' : 'text-indigo-600 bg-indigo-200/50',
+    zinc: darkMode ? 'text-zinc-400 bg-zinc-800' : 'text-zinc-600 bg-zinc-100',
   };
 
   return (
-    <div className="bg-[#f2f2f2] text-[#111111] font-poppins flex flex-col relative pb-20 md:pb-0 min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;700;900&display=swap');
-        .font-bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
-        .font-poppins { font-family: 'Poppins', sans-serif; }
-        .reveal-on-scroll {
-          opacity: 0;
-          transform: translateY(40px);
-          transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
-          will-change: opacity, transform;
-        }
-        .reveal-on-scroll.is-visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        @keyframes marquee {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-50%, 0, 0); }
-        }
-        .animate-marquee {
-          display: flex;
-          width: max-content;
-          animation: marquee 60s linear infinite;
-          will-change: transform;
-        }
-        /* --- SOLUCIÓN AL ZOOM MOLESTO EN CELULARES --- */
-        @media screen and (max-width: 768px) {
-          input, select, textarea {
-            font-size: 16px !important;
-          }
-        }
-      `}} />
-      {toastMessage && (<div className="fixed top-5 left-1/2 -translate-x-1/2 z-[300] bg-[#111111]/90 backdrop-blur-xl text-white px-6 py-4 rounded-full shadow-[0_20px_40px_rgba(252,219,0,0.2)] border border-[#fcdb00]/30 font-bold text-xs uppercase tracking-widest flex items-center gap-3 animate-in slide-in-from-top-10 fade-in duration-300">{toastMessage}</div>)}
+    <div className={`flex flex-col p-4 rounded-xl border shadow-sm transition-all duration-200 group ${colorStyles[color]} ${darkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>
+       <div className="flex items-center justify-between mb-3">
+          <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'opacity-60' : 'text-zinc-600'}`}>{title}</span>
+          <div className={`p-1.5 rounded-md transition-colors ${iconColors[color]}`}>
+              <Icon size={16} strokeWidth={2.5} />
+          </div>
+       </div>
+       <div>
+          <div className="text-2xl font-bold tracking-tight">{value}</div>
+          <div className="flex items-center justify-between mt-2 gap-2">
+             <span className={`text-xs font-medium truncate ${darkMode ? 'opacity-50' : 'text-zinc-500'}`}>{subtitle}</span>
+             {trend}
+          </div>
+       </div>
+    </div>
+  );
+};
+
+const Button = ({ onClick, children, variant = 'primary', className = '', disabled = false, darkMode }) => {
+  const baseStyle = "h-10 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed";
+  const variants = {
+    primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm",
+    danger: darkMode ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" : "bg-red-50 text-red-600 hover:bg-red-100",
+    success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+    outline: darkMode ? "border border-zinc-700 text-zinc-300 bg-transparent hover:bg-zinc-800" : "border border-zinc-300 text-zinc-700 bg-transparent hover:bg-zinc-50"
+  };
+  return <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>{children}</button>;
+};
+
+const Input = ({ label, symbol, darkMode, list, ...props }) => (
+  <div className="flex flex-col gap-1.5 w-full">
+    {label && <label className={`text-xs font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>{label}</label>}
+    <div className="relative">
+      {symbol && <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className={`text-sm font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>{symbol}</span></div>}
+      {props.type === 'search' && <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search size={16} className={`${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}/></div>}
+      <input list={list} className={`h-10 border rounded-lg px-3 w-full text-sm outline-none transition-colors duration-200 ${darkMode ? 'bg-[#0a0c10] border-zinc-800 text-zinc-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50' : 'bg-white border-zinc-300 text-zinc-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50'} ${symbol || props.type === 'search' ? 'pl-9' : ''}`} {...props} />
+    </div>
+  </div>
+);
+
+const Select = ({ label, options = [], darkMode, ...props }) => (
+  <div className="flex flex-col gap-1.5 w-full">
+    {label && <label className={`text-xs font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>{label}</label>}
+    <div className="relative">
+      <select className={`h-10 appearance-none w-full border rounded-lg px-3 pr-8 text-sm outline-none cursor-pointer transition-colors duration-200 ${darkMode ? 'bg-[#0a0c10] border-zinc-800 text-zinc-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50' : 'bg-white border-zinc-300 text-zinc-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50'}`} {...props}>
+        {options.map((opt, idx) => <option key={idx} value={opt.value}>{opt.label}</option>)}
+      </select>
+      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+          <ChevronDown size={14} className={darkMode ? "text-zinc-500" : "text-zinc-400"} />
+      </div>
+    </div>
+  </div>
+);
+
+const CustomSelect = ({ label, options = [], value, onChange, darkMode, placeholder = "-- Elegir --" }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-1.5 w-full relative" ref={dropdownRef}>
+      {label && <label className={`text-xs font-semibold ${darkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>{label}</label>}
       
-      {fomoData && (
-        <div className="fixed bottom-24 left-4 md:bottom-8 md:left-8 z-[100] bg-[#111111]/95 backdrop-blur-md text-white p-3 md:p-4 rounded-2xl shadow-2xl border border-[#fcdb00]/30 flex items-center gap-3 animate-in slide-in-from-bottom-10 fade-in duration-500 hover:scale-105 transition-transform cursor-default">
-          <div className="w-10 h-10 bg-[#fcdb00] rounded-full flex items-center justify-center text-[#111111] text-lg shadow-inner"><i className="fas fa-fire"></i></div>
-          <div className="flex flex-col">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-poppins">¡Venta en Vivo!</span>
-            <span className="font-bebas text-lg md:text-xl tracking-wide uppercase leading-none mt-0.5 text-[#fcdb00]"><span className="text-white">{fomoData.name}</span> compró {fomoData.product}</span>
-          </div>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className={`min-h-10 flex items-center justify-between border rounded-lg px-3 py-2 text-sm outline-none cursor-pointer transition-all duration-200 select-none shadow-sm
+          ${darkMode ? 'bg-[#0a0c10] border-zinc-800 text-zinc-100 hover:border-zinc-700' : 'bg-white border-zinc-300 text-zinc-900 hover:border-zinc-400'}
+          ${isOpen ? 'border-indigo-500 ring-1 ring-indigo-500/50' : ''}`}
+      >
+        <div className={!selectedOption ? (darkMode ? 'text-zinc-500' : 'text-zinc-400') : 'truncate flex-1'}>
+          {selectedOption ? (selectedOption.renderLabel || selectedOption.label) : placeholder}
         </div>
-      )}
-
-      {/* --- MODAL NOTIFICACIÓN CENTRAL DE PREMIO --- */}
-      {showResultModal && wonPrizeData && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#111111]/95 backdrop-blur-xl" onClick={() => setShowResultModal(false)}></div>
-          <div className="relative bg-white p-10 rounded-[2.5rem] shadow-2xl border-4 border-[#fcdb00] text-center max-w-sm w-full animate-in zoom-in-95 duration-500">
-             <div className="text-6xl mb-4">{wonPrizeData.type === 'none' ? '😢' : '🎉'}</div>
-             <h3 className="font-bebas text-5xl uppercase mb-2 text-[#111111]">{wonPrizeData.type === 'none' ? 'UFA...' : '¡GANASTE!'}</h3>
-             <p className="text-xl font-bold text-gray-600 mb-8 uppercase tracking-widest leading-tight">{wonPrizeData.text}</p>
-             <button onClick={() => setShowResultModal(false)} className="w-full bg-[#111111] text-[#fcdb00] py-4 rounded-xl font-bebas text-2xl uppercase hover:bg-black transition-all">CONTINUAR COMPRANDO</button>
-          </div>
-        </div>
-      )}
-
-     {/* --- MODAL RULETA HOT SALE (VIP DARK MODE) --- */}
-      {showRouletteModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          {/* Bloqueo Escape */}
-          <div className="absolute inset-0 bg-[#111111]/90 backdrop-blur-md" onClick={() => !isSpinning && setShowRouletteModal(false)}></div>
-          
-          {/* CONTENEDOR VIP DARK MODE (Gradiente de Opción 3 aplicado aquí) */}
-          <div className="relative w-full max-w-[480px] rounded-[2rem] bg-[radial-gradient(circle_at_center,#121212_0%,#0a0a0a_50%,#050505_100%)] border border-white/10 shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(252,219,0,0.05)] p-8 pt-12 flex flex-col items-center animate-in zoom-in-95 duration-500 overflow-hidden">
-            
-            {/* SPOTLIGHT DE ESTUDIO (Foco de luz suave detrás de la mascota) */}
-            <div className="absolute -top-[5%] right-[5%] w-[250px] h-[250px] bg-white/20 blur-[80px] rounded-full pointer-events-none z-0"></div>
-
-            {/* TU IMAGEN INTACTA */}
-            <img 
-              src="https://i.ibb.co/gZgzZJ35/Dise-o-sin-t-tulo-6.png" 
-              className="absolute -top-[4%] -right-[18%] w-[103%] h-auto max-w-none z-0 object-contain pointer-events-none opacity-100" 
-              alt="Fondo Mascota" 
-            />
-
-            {!isSpinning && <button onClick={() => setShowRouletteModal(false)} className="absolute top-4 right-4 w-10 h-10 bg-white/5 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors z-30 text-gray-400 hover:text-white"><i className="fas fa-times"></i></button>}
-            
-            {/* NUEVO LOGO HOT SALE CORREGIDO (Escala ajustada) */}
-            <div className="relative z-30 w-full h-[90px] flex items-center justify-center mb-4 mt-2 pointer-events-none">
-              <img 
-                src="https://i.ibb.co/kVTX09dS/Dise-o-sin-t-tulo-7.png" 
-                alt="Hot Sale 028" 
-                className="absolute top-1/2 left-1/9 -translate-x-1/3 -translate-y-[50%] w-[430px] md:w-[450px] max-w-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]" 
-              />
-            </div>
-            
-            
-            
-            {/* Contenedor Ruleta */}
-            <div className="relative w-84 h-84 md:w-72 md:h-72 mb-8 mt-2 z-20 flex items-center justify-center">
-              
-              {/* HALO GLOW AMARILLO SUAVE (Opción 1 aplicada detrás de la ruleta) */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130%] h-[130%] bg-[radial-gradient(circle,rgba(252,219,0,0.2)_0%,transparent_60%)] blur-[15px] pointer-events-none z-0"></div>
-
-              {/* LA RULETA */}
-              <div 
-                className="w-full h-full rounded-full border-[6px] border-[#111111] shadow-[0_15px_50px_rgba(0,0,0,0.9)] relative overflow-hidden z-10"
-                style={{ 
-                  background: 'conic-gradient(#111111 0deg 36deg, #fcdb00 36deg 72deg, #111111 72deg 108deg, #fcdb00 108deg 144deg, #111111 144deg 180deg, #fcdb00 180deg 216deg, #111111 216deg 252deg, #fcdb00 252deg 288deg, #111111 288deg 324deg, #fcdb00 324deg 360deg)',
-                  transform: `rotate(${rouletteRotation}deg)`, 
-                  transition: isSpinning ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
-                }}
-              >
-                {/* CAPA DE BRILLO METÁLICO (Le da volumen 3D a la superficie) */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.4)_0%,transparent_70%)] pointer-events-none z-10 mix-blend-overlay"></div>
-
-                {ROULETTE_PRIZES.map((prize, idx) => {
-                  const angle = (360 / 10) * idx;
-                  return (
-                    <div key={idx} className="absolute inset-0 z-0" style={{ transform: `rotate(${angle + 18}deg)` }}>
-                      <div className="absolute top-0 left-0 right-0 h-1/2 flex items-start justify-center pt-4 md:pt-5">
-                        <span 
-                          className={`font-bebas uppercase whitespace-nowrap drop-shadow-md ${prize.text.length > 12 ? 'text-[9px] md:text-[11px] tracking-normal' : 'text-[12px] md:text-[14px] tracking-wider'}`} 
-                          style={{ color: prize.textC, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-                        >
-                          {prize.text}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* EJE CENTRAL (Botón mecánico mate en el centro de la ruleta) */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-gradient-to-b from-[#444] to-[#111] rounded-full border-[3px] border-[#1a1a1a] shadow-[0_5px_15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.15)] z-20 pointer-events-none"></div>
-
-              {/* PUNTERO INTACTO DEL USUARIO */}
-              <img 
-                src="https://i.ibb.co/G4f7mmwn/converted.png" 
-                className="absolute top-[-70px] left-1/3 -translate-x-1/5 w-[100px] h-auto z-30 drop-shadow-[25px_rgba(0,0,0,0.6)] pointer-events-none" 
-                alt="Puntero Dedo" 
-              />
-            </div>
-            
-            {/* BOTÓN PREMIUM MODIFICADO (Letras grandes, sin bordes feos y con profundidad) */}
-            <button onClick={handleSpinRoulette} disabled={isSpinning} className={`w-full py-4 md:py-5 rounded-xl font-bebas text-3xl md:text-4xl uppercase tracking-wider transition-all flex items-center justify-center gap-2 relative z-30 
-              ${isSpinning 
-                ? 'bg-gray-800 text-gray-500 cursor-not-allowed shadow-none' 
-                : 'bg-gradient-to-b from-[#ffea60] to-[#dfb411] text-[#111111] shadow-[0_6px_0_#9a7b0a,0_15px_30px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.5)] hover:brightness-110 active:translate-y-[6px] active:shadow-[0_0px_0_#9a7b0a,0_0px_0_rgba(0,0,0,0)]'}`}>
-                {isSpinning ? <><i className="fas fa-circle-notch fa-spin text-2xl"></i> Girando...</> : '¡PROBA SUERTE!'}
-            </button>
-
-            {/* TEXTO DE URGENCIA AGREGADO (Opción 5) */}
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-4 text-center font-poppins relative z-30">1 giro por cliente • premios limitados</p>
-          </div>
-        </div>
-      )}
-
-      <header className="bg-[#111111] text-white h-[72px] sticky top-0 z-50 flex items-center justify-between px-4 md:px-8 shadow-lg border-b border-white/5 transition-all duration-300">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setIsMenuOpen(true)} className="text-2xl hover:text-[#fcdb00] transition-colors p-2 md:hidden"><i className="fas fa-bars"></i></button>
-          
-          <div className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0 flex items-center gap-3 cursor-pointer group" onClick={() => {setActiveFilter({dept: 'all', cat: 'all'}); setCurrentView('home'); window.scrollTo(0,0);}}>
-            <img src={CONFIG.logoImage} alt="Logo" className="h-10 w-auto object-contain group-hover:scale-105 transition-transform" />
-          </div>
-
-          {/* MENÚ DE ESCRITORIO (PC) */}
-          <div className="hidden md:flex items-center gap-6 ml-8 font-poppins text-xs font-bold uppercase tracking-widest">
-            <button onClick={() => navigateTo('home')} className={`transition-colors ${currentView === 'home' ? 'text-[#fcdb00]' : 'text-gray-300 hover:text-white'}`}>Inicio</button>
-            <button onClick={() => {setActiveFilter({dept: 'all', cat: 'all'}); navigateTo('catalog');}} className={`transition-colors ${currentView === 'catalog' ? 'text-[#fcdb00]' : 'text-gray-300 hover:text-white'}`}>Catálogo</button>
-            <button onClick={() => setShowShippingCalculatorModal(true)} className="bg-white/10 text-white px-4 py-2 rounded-full hover:bg-[#fcdb00] hover:text-[#111111] transition-all flex items-center gap-2"><i className="fas fa-motorcycle text-sm"></i> Calcular Envío</button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 md:gap-4">
-          {/* BOTÓN RULETA PC (Hydration Fix Aplicado) */}
-          <button onClick={() => hasSpunLocal ? showToast("Ya utilizaste tu tiro 🎁") : setShowRouletteModal(true)} className={`hidden md:flex text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full items-center gap-2 transition-all border ${hasSpunLocal ? 'bg-white/5 text-gray-500 border-transparent' : 'bg-[#fcdb00] text-[#111111] border-[#fcdb00] hover:bg-white animate-pulse'}`}>
-              <i className="fas fa-gift text-sm"></i> Ruleta
-          </button>
-          
-          <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:text-[#fcdb00] transition-colors"><i className="fas fa-shopping-bag text-2xl"></i>{getTotalItems() > 0 && (<span className="absolute top-1.5 -right-1 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-lg border border-[#111111]">{getTotalItems()}</span>)}</button>
-        </div>
-      </header>
-
-      {currentView === 'home' && (
-        <div className="w-full bg-[#111111] py-2 overflow-hidden m-0 p-0 border-b border-white/10 relative z-30 flex">
-          <div className="animate-marquee whitespace-nowrap flex items-center">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center gap-8 px-4 text-[#fcdb00] font-poppins font-bold text-[10px] md:text-xs tracking-widest uppercase">
-                <span> 🔥 HOT SALE EXCLUSIVO - HASTA 30% OFF 🔥 </span><span className="text-white/30">•</span>
-                 <span> ENVIOS 24HS CABA/AMBA </span><span className="text-white/30">•</span>
-                  <span> 028 IMPORT </span><span className="text-white/30">•</span>
-                 <span> PEDIME TE LLEGA EN 30'</span><span className="text-white/30">•</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* MENÚ MÓVIL */}
-      {isMenuOpen && (<div className="fixed inset-0 z-[90] flex"><div className="absolute inset-0 bg-[#111111]/60 backdrop-blur-md transition-opacity" onClick={() => setIsMenuOpen(false)}></div><div className="w-[85%] max-w-[380px] bg-[#f2f2f2] h-full relative z-10 animate-in slide-in-from-left duration-500 flex flex-col shadow-2xl rounded-r-[2rem] overflow-hidden"><div className="p-8 bg-[#111111] flex justify-between items-center text-white border-b border-white/10"><span className="font-bebas text-3xl tracking-wide uppercase">028<span className="text-[#fcdb00]">MENU</span></span><button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times text-lg"></i></button></div><div className="flex-1 overflow-y-auto pb-8"><div className="flex flex-col p-4 space-y-2">
-        
-        <div className="md:hidden mb-2">
-            {/* BOTÓN RULETA MÓVIL (Hydration Fix Aplicado) */}
-            <button onClick={() => { setIsMenuOpen(false); hasSpunLocal ? showToast("Ya utilizaste tu tiro 🎁") : setShowRouletteModal(true); }} className={`w-full py-4 rounded-xl font-black uppercase text-xs flex justify-center items-center gap-2 transition-all ${hasSpunLocal ? 'bg-gray-200 text-gray-500' : 'bg-[#fcdb00] text-[#111111] shadow-md animate-pulse'}`}>
-                <i className="fas fa-gift text-lg"></i> Ruleta Hot Sale
-            </button>
-        </div>
-        
-        <button onClick={() => { setShowShippingCalculatorModal(true); setIsMenuOpen(false); }} className="w-full bg-[#111111] text-white p-4 rounded-2xl shadow-md font-black uppercase text-xs hover:bg-[#fcdb00] hover:text-[#111111] transition-all flex justify-center items-center gap-3 mb-2"><i className="fas fa-motorcycle text-lg"></i> Calcular Envío</button>
-        
-        <button onClick={() => { setActiveFilter({dept:'all', cat:'all'}); navigateTo('catalog'); }} className="text-left p-5 bg-white rounded-2xl shadow-sm border border-[#f2f2f2] font-black uppercase text-sm hover:border-[#fcdb00] hover:shadow-md flex justify-between items-center transition-all">Catálogo Completo <i className="fas fa-arrow-right text-[#fcdb00]"></i></button><div className="pt-6 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Departamentos</p></div>{departments.map(dept => { const isExpanded = expandedDept === dept; const deptCats = Array.from(new Set(products.filter(p => p.department === dept).map(p => p.category))); return (<div key={dept} className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] overflow-hidden transition-all"><button onClick={() => setExpandedDept(isExpanded ? null : dept)} className="w-full text-left p-5 font-black uppercase text-sm flex justify-between items-center transition-colors group">{dept} <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-gray-300 group-hover:text-[#fcdb00] transition-colors`}></i></button><div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}><div className="bg-gray-50 flex flex-col pb-4 pt-2 border-t border-gray-100"><button onClick={() => { setActiveFilter({dept, cat: 'all'}); navigateTo('catalog'); }} className="text-left px-6 py-3 font-black text-xs text-[#111111] uppercase hover:text-[#fcdb00] transition-colors flex items-center gap-2"><i className="fas fa-layer-group text-gray-400"></i> Ver todo en {dept}</button>{deptCats.map(cat => (<button key={cat} onClick={() => { setActiveFilter({dept, cat}); navigateTo('catalog'); setTimeout(() => { const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }, 300); }} className="text-left px-6 py-3 font-bold text-xs text-gray-500 uppercase hover:text-[#111111] transition-colors pl-12 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-gray-300 before:rounded-full before:absolute before:left-7 before:top-1/2 before:-translate-y-1/2 hover:before:bg-[#fcdb00]">{cat}</button>))}</div></div></div>); })}
-        
-        <div className="pt-8 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins">Información Útil</p></div>
-        <div className="bg-white rounded-2xl shadow-sm border border-[#f2f2f2] p-2 space-y-1">
-          <button onClick={() => { navigateTo('nosotros'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-users"></i></div> Quiénes Somos</button>
-          <button onClick={() => { navigateTo('envios'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-truck"></i></div> Envíos y Logística</button>
-          <button onClick={() => { navigateTo('pagos'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-[#fcdb00]"><i className="fas fa-credit-card"></i></div> Medios de Pago</button>
-          <button onClick={() => { navigateTo('terminos'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-gray-400"><i className="fas fa-file-contract"></i></div> Legales y Términos</button>
-          <button onClick={() => { navigateTo('arrepentimiento'); }} className="w-full text-left p-4 font-bold text-xs text-gray-600 uppercase hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-[#f2f2f2] flex items-center justify-center text-gray-400"><i className="fas fa-undo"></i></div> Botón de Arrepentimiento</button>
-        </div>
-
-        {/* REDES SOCIALES EN MENÚ MÓVIL */}
-        <div className="pt-8 pb-2 px-2"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest font-poppins text-center">Nuestras Redes</p></div>
-        <div className="flex gap-4 justify-center pb-4">
-          <a href="https://www.tiktok.com/@028.import" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:border-[#fcdb00] transition-all"><i className="fab fa-tiktok text-xl"></i></a>
-          <a href="https://www.instagram.com/028.import" target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:border-[#fcdb00] transition-all"><i className="fab fa-instagram text-xl"></i></a>
-          <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:border-[#fcdb00] transition-all"><i className="fab fa-whatsapp text-xl"></i></a>
-        </div>
-
-        </div></div></div></div>)}
-
-      {currentView === 'home' ? (
-        <>
-          <header className="relative w-full h-[35vh] md:h-[55vh] flex items-center justify-center bg-[#111111] overflow-hidden border-b border-[#111111]">
-            <img src={CONFIG.bannerImage} alt="Banner 028" className="absolute inset-0 w-full h-full object-cover object-center" />
-          </header>
-          <main className="flex-grow px-4 md:px-8 pt-10 max-w-7xl mx-auto min-h-[50vh] pb-32 w-full">
-            <div className="md:hidden relative mb-12 reveal-on-scroll"><i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i><input type="text" placeholder="Buscar productos, marcas..." value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value); setCurrentView('catalog');}} className="w-full bg-white/70 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] pl-12 pr-6 py-4 rounded-2xl text-sm font-bold outline-none focus:border-[#fcdb00] focus:bg-white transition-all placeholder:text-gray-400 font-poppins" /></div>
-            <div className="mb-16 reveal-on-scroll">
-              <h3 className="font-bebas text-2xl text-[#111111] mb-4 pl-2">Explorar la tienda</h3>
-              <div className="flex overflow-x-auto gap-4 md:gap-6 no-scrollbar pb-6 snap-x mask-image-gradient pr-8">
-                {departments.map(dept => {
-                  const iconId = deptIcons[dept] || 'fa-box';
-                  const iconObj = DEPT_ICONS.find(i => i.id === iconId) || { id: 'fa-box', prefix: 'fas' };
-                  return (
-                  <div key={dept} onClick={() => navigateTo('catalog', dept)} className="snap-start flex-shrink-0 w-32 h-32 md:w-44 md:h-44 bg-white/70 backdrop-blur-xl rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white flex flex-col items-center justify-center gap-4 cursor-pointer hover:scale-105 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:border-[#fcdb00] transition-all duration-500 group">
-                    <div className="w-14 h-14 md:w-16 md:h-16 bg-[#f2f2f2] rounded-full flex items-center justify-center text-[#111111] text-2xl md:text-3xl group-hover:bg-[#fcdb00] transition-colors"><i className={`${iconObj.prefix} ${iconObj.id}`}></i></div>
-                    <span className="font-bold text-[10px] md:text-xs uppercase tracking-widest text-center px-2 text-[#111111] group-hover:text-black transition-colors font-poppins">{dept}</span>
-                  </div>
-                )})}
-              </div>
-            </div>
-             {homeSections.length === 0 ? (<div className="text-center py-20"><div className="w-12 h-12 border-4 border-[#f2f2f2] border-t-[#fcdb00] rounded-full animate-spin mx-auto mb-4"></div><p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest font-poppins">Preparando vidriera...</p></div>) : (
-                 homeSections.map((sec, sectionIndex) => {
-                     const secProducts = sec.productIds?.map(pid => products.find(p => p.id === pid)).filter(Boolean) || [];
-                     if(secProducts.length === 0) return null;
-                     return (<div key={sec.id} className="mb-20 reveal-on-scroll"><div className="flex justify-between items-end mb-6 pl-2 border-b-2 border-[#f2f2f2] pb-3"><h2 className="text-4xl md:text-6xl font-bebas text-[#111111] tracking-wide uppercase"><i className={`${AVAILABLE_ICONS.find(i => i.id === sec.icon)?.prefix || 'fas'} ${sec.icon || 'fa-star'} ${sec.iconColor || 'text-[#fcdb00]'} mr-3 drop-shadow-sm`}></i>{sec.title}</h2><button onClick={() => navigateTo('catalog')} className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#111111] hover:text-[#fcdb00] transition-colors bg-white/50 px-5 py-2.5 rounded-full border border-white hover:border-[#f2f2f2]">Ver Catálogo <i className="fas fa-arrow-right"></i></button></div>
-                     <div className={sec.layout === 'vertical' ? "flex flex-wrap gap-3 md:gap-5" : "flex overflow-x-auto gap-4 md:gap-6 no-scrollbar pb-8 snap-x mask-image-gradient pr-8"}>{secProducts.map((p, index) => renderProductCard(p, index, true, sec.layout))}</div>
-                     <button onClick={() => navigateTo('catalog')} className="md:hidden w-full mt-2 bg-white/70 backdrop-blur-xl border border-white shadow-sm text-[#111111] py-4 rounded-xl font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform font-poppins">ver todos los modelos <i className="fas fa-arrow-right text-[#fcdb00]"></i></button></div>)
-                 })
-             )}
-          </main>
-        </>
-      ) : currentView === 'catalog' ? (
-        <>
-          <div className="bg-white/80 backdrop-blur-2xl sticky top-[72px] z-40 border-b border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] pt-3 pb-3 transition-all duration-300"><div className="max-w-7xl mx-auto px-4 md:px-8"><div className="flex items-center gap-3 mb-3"><button onClick={() => navigateTo('home')} className="text-gray-400 hover:text-[#111111] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5"><i className="fas fa-home"></i> Inicio</button><span className="text-gray-300 text-[10px]"><i className="fas fa-chevron-right"></i></span><span className="text-[#111111] font-bold uppercase tracking-widest text-[10px]">{activeFilter.dept !== 'all' ? activeFilter.dept : 'CATÁLOGO COMPLETO'}</span></div>{uniqueCategories.length > 0 && (
-            <div className="flex flex-wrap md:flex-nowrap md:overflow-x-auto gap-2.5 py-2 md:mask-image-gradient md:pr-8 justify-center md:justify-start">
-              <button onClick={() => {setActiveFilter({...activeFilter, cat: 'all'}); window.scrollTo({top: 0, behavior: 'smooth'});}} className={`whitespace-nowrap px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeFilter.cat === 'all' ? 'bg-[#111111] text-[#fcdb00] shadow-md' : 'bg-white border border-[#f2f2f2] text-gray-500 hover:bg-gray-50'}`}>Todos</button>
-              {uniqueCategories.map(cat => (
-                <button key={cat} onClick={() => { setActiveFilter({...activeFilter, cat: cat}); const target = document.getElementById(slugify(cat)); if(target) target.scrollIntoView({behavior: 'smooth'}); }} className={`whitespace-nowrap px-5 py-2 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex-shrink-0 ${activeFilter.cat === cat ? 'bg-[#111111] text-[#fcdb00] shadow-md' : 'bg-white border border-[#f2f2f2] text-gray-500 hover:bg-gray-50'}`}>{cat}</button>
-              ))}
-            </div>
-          )}</div></div>
-          <main className="flex-grow px-4 md:px-8 py-10 max-w-7xl mx-auto min-h-[50vh] pb-32 w-full">{searchTerm && products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.category.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (<div className="text-center py-24 bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white shadow-sm"><div className="w-20 h-20 bg-[#f2f2f2] rounded-full flex items-center justify-center mx-auto mb-6"><i className="fas fa-ghost text-3xl text-gray-400"></i></div><h3 className="text-3xl font-bebas uppercase tracking-wide text-[#111111] mb-2">No encontramos nada</h3><p className="text-xs uppercase tracking-widest text-gray-500 font-poppins">Intenta buscar otro sabor o marca.</p></div>)}{uniqueCategories.map(cat => renderProductSection(cat))}</main>
-        </>
-      ) : ( <main className="flex-grow">{renderLegalPage()}</main> )}
-
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#f2f2f2]/90 backdrop-blur-3xl border-t border-white shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40 pb-safe pt-2 px-2"><div className="flex justify-around items-center h-16 max-w-md mx-auto"><button onClick={() => navigateTo('home')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='home' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-home text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Inicio</span></button><button onClick={() => navigateTo('catalog')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='catalog' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-th-large text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Catálogo</span></button><button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center justify-center gap-1 w-full h-full text-[#111111] relative active:scale-95 transition-transform"><div className="relative bg-[#111111] w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"><i className="fas fa-shopping-bag text-lg text-white"></i>{getTotalItems() > 0 && <span className="absolute -top-1.5 -right-1.5 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm border border-[#111111]">{getTotalItems()}</span>}</div><span className="text-[9px] font-bebas uppercase tracking-wider mt-0.5">Bolsa</span></button></div></nav>
-
-      <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-auto relative z-30 rounded-t-[3rem] overflow-hidden"><div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#fcdb00] to-transparent opacity-50"></div><div className="max-w-7xl mx-auto px-8"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16 text-xs md:text-sm"><div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.4)]" /></div><p className="text-gray-400 font-medium leading-relaxed pr-4 font-poppins">Redefinimos la experiencia de compra priorizando tu tiempo y confianza.</p></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Contacto</h4><ul className="space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones & Juramento,<br/>Belgrano, CABA.</span></li></ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Información Legal</h4>
-              <ul className="space-y-4 text-gray-400 font-poppins font-medium">
-                <li><button onClick={() => navigateTo('nosotros')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Quiénes Somos</button></li>
-                <li><button onClick={() => navigateTo('envios')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Logística de Envío</button></li>
-                <li><button onClick={() => navigateTo('pagos')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Medios de Pago</button></li>
-                <li><button onClick={() => navigateTo('terminos')} className="hover:text-white transition-colors flex items-center gap-2 mt-4 pt-4 border-t border-white/10"><i className="fas fa-file-contract text-gray-600 text-[10px]"></i> Términos y Condiciones</button></li>
-                <li><button onClick={() => navigateTo('privacidad')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-shield-alt text-gray-600 text-[10px]"></i> Política de Privacidad</button></li>
-              </ul></div><div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Nuestras Redes</h4><div className="flex gap-4"><a href="https://www.tiktok.com/@028.import" target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-tiktok text-2xl"></i></a><a href="https://www.instagram.com/028.import" target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-instagram text-2xl"></i></a><a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#25D366] hover:text-white transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(37,211,102,0.3)]"><i className="fab fa-whatsapp text-2xl"></i></a></div></div></div><div className="flex flex-col md:flex-row justify-between items-center border-t border-white/10 pt-8 text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest text-center md:text-left gap-4 font-poppins"><p>© {new Date().getFullYear()} 028IMPORT. Todos los derechos reservados.</p><div className="flex gap-4"><button onClick={() => navigateTo('arrepentimiento')} className="hover:text-white transition-colors underline underline-offset-4">Botón de Arrepentimiento</button></div></div></div></footer>
-
-      {selectedProduct && (<div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center p-4 sm:p-6"><div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-xl transition-opacity" onClick={() => setSelectedProduct(null)}></div><div className="relative bg-[#f2f2f2] w-full max-w-4xl rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col md:flex-row max-h-[90vh] border border-white/20"><button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/80 backdrop-blur-2xl border border-white text-[#111111] rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors shadow-lg"><i className="fas fa-times text-lg"></i></button><div className="w-full md:w-1/2 bg-white p-8 flex items-center justify-center relative min-h-[350px] border-r border-[#f2f2f2]">{selectedProduct.tag && <span className="absolute top-8 left-8 bg-[#111111] text-[#fcdb00] font-bebas text-sm px-4 py-1.5 uppercase tracking-wider rounded-sm shadow-lg z-10">{selectedProduct.tag}</span>}<img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full max-h-[450px] object-contain drop-shadow-2xl animate-in scale-95 duration-700 ease-out mix-blend-multiply" /></div><div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center overflow-y-auto bg-[#f2f2f2]"><p className="text-[#fcdb00] font-bebas uppercase tracking-wider text-xl mb-1 drop-shadow-sm">{selectedProduct.category}</p><h2 className="text-5xl md:text-6xl font-bebas uppercase tracking-wide text-[#111111] leading-none mb-6">{selectedProduct.name}</h2><p className="text-gray-500 text-sm font-medium mb-8 leading-relaxed whitespace-pre-line font-poppins">{selectedProduct.description || "Experimenta la mejor calidad con nuestra selección de productos premium."}</p><div className="mt-auto border-t border-gray-300 pt-8"><p className="text-[#111111] font-bebas text-5xl md:text-6xl tracking-wide mb-8 drop-shadow-sm">{CONFIG.currencySymbol}{formatPrice(selectedProduct.price)}</p>{selectedProduct.inStock === false ? ( <button disabled className="w-full bg-gray-300 text-gray-500 py-4 text-lg font-bebas uppercase tracking-wider rounded-xl cursor-not-allowed border border-gray-400">Producto Agotado</button> ) : ( <button onClick={(e) => addToCart(selectedProduct, e)} className="w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] py-4 text-xl font-bebas uppercase tracking-wider rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] transition-all duration-300 flex justify-center items-center gap-3 active:scale-95"><i className="fas fa-shopping-cart text-lg mb-0.5"></i> Agregar a la bolsa</button> )}</div></div></div></div>)}
-
-      {isCartOpen && (<div className="fixed inset-0 z-[60] flex flex-col justify-end items-center sm:justify-center p-0 md:p-4"><div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setIsCartOpen(false)} /><div className="relative bg-[#f2f2f2] w-full max-w-lg md:mx-auto rounded-t-[2rem] md:rounded-[2rem] h-[90vh] md:max-h-[85vh] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-white/20 animate-in slide-in-from-bottom duration-500 flex flex-col pb-safe"><div className="p-6 border-b border-gray-300 flex justify-between items-center bg-white sticky top-0 z-10"><div><h2 className="text-4xl font-bebas uppercase tracking-wide text-[#111111] leading-none mb-1">Tu Bolsa</h2><p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest font-poppins">{getTotalItems()} artículos seleccionados</p></div><button onClick={() => setIsCartOpen(false)} className="w-10 h-10 bg-[#f2f2f2] rounded-full text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex items-center justify-center shadow-sm border border-gray-200"><i className="fas fa-times text-lg"></i></button></div><div className="overflow-y-auto p-4 md:p-6 flex-grow no-scrollbar"><div className="space-y-3 mb-10">{cart.length === 0 && (<div className="text-center py-20 bg-white/50 rounded-2xl border border-dashed border-gray-300"><div className="w-16 h-16 bg-[#f2f2f2] rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><i className="fas fa-shopping-bag text-2xl text-gray-400"></i></div><p className="text-gray-400 font-bold text-xs uppercase tracking-widest font-poppins">Tu bolsa está vacía</p></div>)}{cart.map(item => (<div key={item.id} className="flex justify-between items-center bg-[#f9f9f9] p-3 rounded-2xl shadow-[0_4px_15px_rgba(0,0,0,0.02)] border border-gray-200"><div className="flex items-center gap-4"><div className="w-16 h-16 bg-white border border-gray-100 rounded-xl overflow-hidden flex items-center justify-center p-1"><img src={item.image} className="w-full h-full object-contain mix-blend-multiply" alt=""/></div><div className="flex flex-col"><p className="font-bebas text-lg uppercase tracking-wide max-w-[130px] md:max-w-[180px] line-clamp-1 text-[#111111]">{item.name}</p><p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1 bg-white border border-gray-100 w-fit px-2 py-0.5 rounded-md font-poppins">{item.qty} un.</p></div></div><div className="flex items-center gap-4 pr-2"><p className="font-bebas text-[#fcdb00] text-2xl tracking-wide drop-shadow-sm">${formatPrice(item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item)))}</p><div className="flex flex-col items-center gap-1.5 bg-white rounded-md p-1.5 border border-gray-200 shadow-sm"><button onClick={() => changeQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-[#111111] bg-gray-50 rounded-md hover:bg-[#fcdb00] transition-colors"><i className="fas fa-plus text-[10px]"></i></button><button onClick={() => changeQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-[#111111] bg-gray-50 rounded-md hover:bg-[#fcdb00] transition-colors"><i className="fas fa-minus text-[10px]"></i></button></div></div></div>))}
-        
-        {upsellsList.length > 0 && upsellsList.some(u => u.active && !cart.find(c => c.id == u.productId)) && (
-            <div className="mt-8 mb-2 animate-in slide-in-from-bottom duration-500">
-                <p className="font-bebas text-xl mb-3 uppercase tracking-wider text-[#111111] flex items-center gap-2">
-                    <i className="fas fa-fire text-[#fcdb00]"></i> Agregá a tu pedido
-                </p>
-                <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar snap-x mask-image-gradient pr-4">
-                    {upsellsList.filter(u => u.active && !cart.find(c => c.id == u.productId)).map(upsell => {
-                        const prod = products.find(p => p.id == upsell.productId);
-                        if (!prod || prod.inStock === false || prod.isDeleted) return null;
-                        return (
-                            <div key={upsell.id} className="snap-start flex-shrink-0 w-[260px] bg-[#f9f9f9] p-3 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3 relative transition-all hover:border-[#fcdb00]">
-                                <div className="relative w-16 h-16 bg-white border border-gray-100 rounded-xl overflow-hidden flex items-center justify-center p-1 flex-shrink-0">
-                                    <span className="absolute top-0 left-0 bg-[#111111] text-[#fcdb00] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-br-lg shadow-sm z-10 font-poppins">Oferta</span>
-                                    <img src={prod.image} className="w-full h-full object-contain mix-blend-multiply" alt=""/>
-                                </div>
-                                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                    <p className="font-bebas text-sm uppercase truncate text-[#111111] leading-tight">{prod.name}</p>
-                                    <p className="text-[#111111] font-bebas text-xl leading-none mt-1.5 drop-shadow-sm">${formatPrice(upsell.price)} <span className="line-through text-gray-400 text-[10px] font-poppins ml-1">${formatPrice(prod.price)}</span></p>
-                                </div>
-                                <button onClick={() => handleAddUpsellToCart(upsell)} className="w-10 h-10 flex-shrink-0 bg-[#111111] text-[#fcdb00] rounded-full flex items-center justify-center hover:bg-[#fcdb00] hover:text-[#111111] transition-colors shadow-md active:scale-90">
-                                    <i className="fas fa-plus text-sm"></i>
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        )}
-        
-        </div>{cart.length > 0 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-          
-          {/* CUADRO DE PREMIO HOT SALE */}
-          {localRoulettePrize && localRoulettePrize.type !== 'none' && (
-            <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
-                <p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-ticket-alt text-[#fcdb00] text-xl"></i> Tus Beneficios</p>
-                <div className="bg-[#111111] text-[#fcdb00] p-4 rounded-xl flex items-center justify-between border border-[#fcdb00]/30 shadow-md">
-                    <div className="flex items-center gap-4"><i className="fas fa-gift text-2xl"></i><div className="flex flex-col"><span className="font-bold text-[10px] uppercase tracking-widest text-white">Premio Hot Sale Aplicado</span><span className="font-bebas text-xl leading-none mt-1">{localRoulettePrize.text}</span></div></div><i className="fas fa-check-circle text-2xl text-[#25D366]"></i>
-                </div>
-            </div>
-          )}
-
-          <div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-user-circle text-[#fcdb00] text-xl"></i> Tus Datos</p><div className="flex flex-col gap-3 font-poppins"><input type="text" placeholder="Nombre completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /><input type="tel" placeholder="Número de WhatsApp" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="w-full p-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" /></div></div><div className="bg-white p-6 rounded-[1.5rem] border border-[#f2f2f2] shadow-[0_4px_15px_rgba(0,0,0,0.02)]"><p className="font-bebas text-xl mb-4 uppercase tracking-wider text-[#111111] flex items-center gap-2"><i className="fas fa-map-marked-alt text-[#fcdb00] text-xl"></i> Entrega</p><div className="flex gap-2 mb-5 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200 font-poppins"><button onClick={() => setDeliveryMethod('retiro')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'retiro' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Retiro Local</button><button onClick={() => setDeliveryMethod('envio')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${deliveryMethod === 'envio' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Envío Domicilio</button></div>
-              
-              {deliveryMethod === 'retiro' && (
-                <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 mt-4">
-                  <div className="w-full h-[200px] rounded-xl overflow-hidden border border-gray-200 shadow-sm relative bg-[#f2f2f2] flex items-center justify-center">
-                    <div className="absolute flex flex-col items-center justify-center text-gray-400 gap-2">
-                      <i className="fas fa-circle-notch fa-spin text-[#fcdb00] text-2xl"></i>
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Cargando mapa...</span>
-                    </div>
-                    <iframe 
-                      width="100%" 
-                      height="100%" 
-                      frameBorder="0" 
-                      style={{ border: 0, position: 'relative', zIndex: 10 }}
-                      src="https://maps.google.com/maps?q=Mi%C3%B1ones%20y%20Juramento,%20Belgrano,%20CABA&t=&z=16&ie=UTF8&iwloc=&output=embed" 
-                      allowFullScreen
-                    ></iframe>
-                  </div>
-                  <div className="bg-[#fcdb00]/10 border border-[#fcdb00] p-4 rounded-xl flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-store text-lg"></i></div>
-                    <div className="flex flex-col">
-                      <span className="font-bebas text-lg tracking-wide leading-none mb-1 text-[#111111]">Miñones & Juramento</span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Belgrano, CABA.<br/>Te enviaremos el depto exacto al confirmar.</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {deliveryMethod === 'envio' && (
-                <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 font-poppins">
-                  <div className="flex flex-col gap-3 mb-2">
-                    <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">Elegí tu opción de envío:</label>
-                    <div onClick={() => setShippingType('flash')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'flash' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
-                      <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-bolt text-lg"></i></div>
-                      <div className="flex flex-col"><span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'flash' ? 'text-[#111111]' : 'text-gray-700'}`}>Envío Flash</span><span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏱️ Te llega en menos de 30 minutos.<br/>💳 Abonando solo por transferencia.</span></div>
-                      {shippingType === 'flash' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
-                    </div>
-                    <div onClick={() => setShippingType('moto')} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex gap-4 items-center ${shippingType === 'moto' ? 'border-[#fcdb00] bg-[#fcdb00]/10' : 'border-gray-200 bg-white hover:border-[#fcdb00]/50'}`}>
-                      <div className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#fcdb00] shadow-md flex-shrink-0"><i className="fas fa-motorcycle text-lg"></i></div>
-                      <div className="flex flex-col">
-                        <span className={`font-bebas text-xl tracking-wide leading-none mb-1.5 ${shippingType === 'moto' ? 'text-[#111111]' : 'text-gray-700'}`}>
-                          Vía Motomensajería {localRoulettePrize && localRoulettePrize.type === 'shipping' && <span className="text-white bg-green-500 px-2 py-0.5 rounded-sm text-sm ml-2">GRATIS</span>}
-                        </span>
-                        <span className="text-[10px] font-bold text-gray-500 leading-relaxed">⏲️ Horarios fijos de recorrido: 13:00 y 18:00hs.</span>
-                      </div>
-                      {shippingType === 'moto' && <div className="ml-auto text-[#fcdb00]"><i className="fas fa-check-circle text-xl"></i></div>}
-                    </div>
-                  </div>
-                  
-                  {shippingType === 'flash' && (
-                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                      <div className="relative">
-                        <i className="fas fa-map-marker-alt absolute left-4 top-1/2 -translate-y-1/2 text-[#fcdb00]"></i>
-                        <input type="text" placeholder="Dirección completa" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      </div>
-                      <div className="relative">
-                        <i className="fas fa-city absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" placeholder="Barrio / Localidad / CP" value={zone} onChange={(e) => setZone(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      </div>
-                      
-                      <div className="relative mt-1">
-                        <i className="fas fa-building absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" placeholder="Piso / Depto / Torre (Opcional)" value={aptDetails} onChange={(e) => setAptDetails(e.target.value)} className="w-full pl-11 pr-4 py-4 bg-[#f2f2f2] border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#fcdb00] transition-all placeholder:text-gray-400" />
-                      </div>
-                    </div>
-                  )}
-
-                  {shippingType === 'moto' && (
-                    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                      <CalculadorEnvio 
-                        address={address} setAddress={setAddress}
-                        zone={zone} setZone={setZone}
-                        shippingType={shippingType}
-                        setShippingCost={setShippingCost}
-                        aptDetails={aptDetails}
-                        setAptDetails={setAptDetails}
-                      />
-                      
-                      <div className="flex flex-col gap-3 mt-2">
-                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cuándo querés recibirlo?</label>
-                        
-                        <div className="relative">
-                          <i className="fas fa-calendar-alt absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                          <select 
-                            value={deliveryDate} 
-                            onChange={(e) => setDeliveryDate(e.target.value)} 
-                            className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-[11px] font-bold uppercase tracking-wider outline-none focus:border-[#fcdb00] transition-all appearance-none cursor-pointer text-[#111111]"
-                          >
-                            {next7Days.map(d => (
-                              <option key={d.value} value={d.value}>{d.label}</option>
-                            ))}
-                          </select>
-                          <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[10px]"></i>
-                        </div>
-
-                        <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
-                          <button onClick={() => setDeliveryTime('13:00')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryTime === '13:00' ? 'bg-white text-[#111111] shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-sun"></i> Turno 13:00
-                          </button>
-                          <button onClick={() => setDeliveryTime('18:00')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryTime === '18:00' ? 'bg-white text-[#111111] shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-moon"></i> Turno 18:00
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 mt-2">
-                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">¿Cómo querés abonar?</label>
-                        <div className="flex gap-2 bg-[#f2f2f2] p-1.5 rounded-xl border border-gray-200">
-                          <button onClick={() => setPaymentMethod('transferencia')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'transferencia' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-university"></i> Transferencia
-                          </button>
-                          <button onClick={() => setPaymentMethod('efectivo')} className={`flex-1 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'efectivo' ? 'bg-white text-[#111111] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-money-bill-wave"></i> Efectivo
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              )}
-              </div>
-              </div>)}</div>{cart.length > 0 && (<div className="p-6 bg-white border-t border-gray-200 sticky bottom-0 z-20"><div className="flex justify-between items-end mb-4"><span className="font-bold text-gray-500 text-[10px] uppercase tracking-widest font-poppins">Total a Pagar</span><span className="font-bebas text-5xl text-[#111111] tracking-wide leading-none drop-shadow-sm"><span className="text-[#fcdb00] text-3xl mr-1.5">{CONFIG.currencySymbol}</span>{formatPrice(calculateTotal())}</span></div><button onClick={handleCheckout} className={`w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] shadow-[0_10px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_10px_30px_rgba(252,219,0,0.4)] active:scale-95 font-bebas py-4 rounded-xl uppercase tracking-wider text-xl flex justify-center items-center gap-3 transition-all duration-300`}><i className="fas fa-check-circle text-2xl mb-0.5"></i> Confirmar Pedido</button></div>)}</div></div>)}
-      
-      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] flex flex-col items-end gap-3 group">
-        <div className={`bg-white text-[#111111] p-3 md:p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-200 max-w-[180px] md:max-w-[200px] text-center transform transition-all duration-700 ease-out origin-bottom-right relative ${showTooltip ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100'}`}>
-          <p className="font-poppins font-bold text-[10px] md:text-xs">¿No sabés cuál elegir? Te ayudamos</p>
-          <div className="absolute bottom-[-6px] right-6 w-3 h-3 md:w-4 md:h-4 bg-white transform rotate-45 border-r border-b border-gray-200"></div>
-        </div>
-        <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white text-3xl shadow-[0_10px_30px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform duration-300"><i className="fab fa-whatsapp"></i></a>
+        <ChevronDown size={14} className={`transition-transform duration-200 ml-2 flex-shrink-0 ${isOpen ? 'rotate-180 text-indigo-500' : (darkMode ? 'text-zinc-500' : 'text-zinc-400')}`} />
       </div>
 
-      {/* --- MODAL DE PAGO OFFLINE --- */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowPaymentModal(false)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="bg-[#111111] p-6 text-center relative border-b border-white/10">
-              <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times"></i></button>
-              <div className="w-16 h-16 bg-[#fcdb00] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"><i className="fas fa-university text-3xl text-[#111111]"></i></div>
-              <h2 className="text-3xl font-bebas text-white uppercase tracking-wide">¡Pedido Reservado!</h2>
-              <p className="text-[#fcdb00] text-[11px] font-bold uppercase tracking-widest font-poppins">Falta 1 paso para despacharlo</p>
+      {isOpen && (
+        <div className={`absolute top-[100%] mt-1 z-50 w-full max-h-64 overflow-y-auto rounded-lg shadow-xl custom-scrollbar animate-in fade-in slide-in-from-top-1 p-1.5 
+          ${darkMode ? 'bg-[#0f1115] border border-zinc-800' : 'bg-zinc-100 border border-zinc-300'}`}
+        >
+          {options.length === 0 ? (
+            <div className={`p-3 text-xs text-center font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>No hay opciones disponibles</div>
+          ) : (
+            <div className="flex flex-col gap-1"> 
+              {options.map((opt, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    if (!opt.disabled) {
+                      onChange({ target: { value: opt.value } });
+                      setIsOpen(false);
+                    }
+                  }}
+                  className={`px-2.5 py-1.5 rounded-md text-sm transition-all duration-200 border shadow-sm
+                    ${opt.disabled 
+                      ? (darkMode ? 'opacity-40 cursor-not-allowed bg-[#131824] border-zinc-800/50' : 'opacity-50 cursor-not-allowed bg-white border-zinc-200/50') 
+                      : (darkMode ? 'cursor-pointer bg-[#131824] border-zinc-700 hover:border-indigo-500/50 hover:bg-[#1c2235]' : 'cursor-pointer bg-white border-zinc-200 hover:border-indigo-400/50 hover:bg-indigo-50')}
+                    ${value === opt.value && !opt.disabled ? (darkMode ? 'ring-1 ring-indigo-500 bg-indigo-500/10 border-indigo-500' : 'ring-1 ring-indigo-500 bg-indigo-50 border-indigo-500') : ''}`}
+                >
+                  {opt.renderDropdown ? opt.renderDropdown : <span className={value === opt.value ? 'font-bold text-indigo-500' : ''}>{opt.label}</span>}
+                </div>
+              ))}
             </div>
-            <div className="p-6 md:p-8 flex flex-col gap-6">
-              <div className="text-center">
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 font-poppins">Total a transferir</p>
-                <p className="text-5xl font-bebas text-[#111111] leading-none tracking-wide"><span className="text-[#fcdb00] text-3xl mr-1">$</span>{formatPrice(calculateTotal())}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- GRÁFICOS RECHARTS Y BARRAS MODERNAS ---
+const CustomTooltip = ({ active, payload, label, darkMode }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className={`p-3 rounded-lg shadow-xl border ${darkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}>
+        <p className="text-xs font-semibold mb-1 opacity-70">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm font-bold" style={{ color: entry.color }}>
+            {entry.name}: {entry.name === 'Ingresos' ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(entry.value) : `${entry.value} un.`}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+const SalesAreaChart = ({ sales, mode, customRange, darkMode, isCompareMode = false }) => {
+  const [metric, setMetric] = useState('revenue');
+  const formatCompact = (val) => new Intl.NumberFormat('es-AR', { notation: "compact", compactDisplay: "short", maximumFractionDigits: 1 }).format(val);
+
+  const chartData = useMemo(() => {
+    const map = {};
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    const generateDays = (daysBack) => {
+        const today = new Date();
+        for (let i = daysBack - 1; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const yStr = d.getFullYear();
+            const mStr = String(d.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(d.getDate()).padStart(2, '0');
+            const key = `${yStr}-${mStr}-${dayStr}`;
+            map[key] = { key, name: `${dayStr}/${mStr}`, fullLabel: `${dayStr} de ${monthNames[d.getMonth()]}`, Ingresos: 0, Unidades: 0 };
+        }
+    };
+
+    if (mode === 'today') { generateDays(1); }
+    else if (mode === 'week') { generateDays(7); }
+    else if (mode === '15days') { generateDays(15); }
+    else if (mode === '30days') { generateDays(30); }
+    else if (mode === 'custom') {
+      const start = new Date(customRange.start + 'T00:00:00');
+      const end = new Date(customRange.end + 'T00:00:00');
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const key = `${y}-${m}-${day}`;
+          map[key] = { key, name: `${day}/${m}`, fullLabel: `${day} de ${monthNames[d.getMonth()]}`, Ingresos: 0, Unidades: 0 };
+        }
+      }
+    }
+    else if (mode !== 'all') {
+      const [yStr, mStr] = mode.split('-');
+      const y = parseInt(yStr);
+      const m = parseInt(mStr);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dayStr = String(i).padStart(2, '0');
+        const key = `${yStr}-${mStr}-${dayStr}`;
+        map[key] = { key, name: `${dayStr}/${mStr}`, fullLabel: `${i} de ${monthNames[m - 1]}`, Ingresos: 0, Unidades: 0 };
+      }
+    } else {
+      if (!sales || sales.length === 0) return [];
+      const dates = sales.map(s => s.date ? new Date(s.date) : new Date());
+      const minDate = new Date(Math.min(...dates.map(d => isNaN(d.getTime()) ? new Date().getTime() : d.getTime())));
+      const maxDate = new Date(Math.max(...dates.map(d => isNaN(d.getTime()) ? new Date().getTime() : d.getTime())));
+      
+      for (let d = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate()); d <= maxDate; d.setDate(d.getDate() + 1)) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const key = `${y}-${m}-${day}`;
+        map[key] = { key, name: `${day}/${m}`, fullLabel: `${day} de ${monthNames[d.getMonth()]}`, Ingresos: 0, Unidades: 0 };
+      }
+    }
+
+    sales.forEach(s => {
+      if(!s.date) return;
+      const d = new Date(s.date);
+      if(isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (map[key]) {
+        map[key].Ingresos += s.totalSaleRaw || 0;
+        map[key].Unidades += s.quantity || 0;
+      }
+    });
+
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key));
+  }, [sales, mode, customRange]);
+
+  if (chartData.length === 0) return <div className="h-[250px] flex items-center justify-center text-sm font-medium opacity-50">No hay transacciones en este periodo.</div>;
+
+  const themeColor = isCompareMode ? (darkMode ? '#f43f5e' : '#e11d48') : (darkMode ? '#818cf8' : '#4f46e5'); 
+  const gridColor = darkMode ? '#27272a' : '#e4e4e7';
+  const textColor = darkMode ? '#71717a' : '#a1a1aa';
+
+  return (
+    <div className="w-full flex flex-col space-y-4">
+      <div className="flex justify-end mb-1">
+          <div className={`flex items-center p-1 rounded-lg border ${darkMode ? 'bg-[#0f1115] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+              <button onClick={() => setMetric('revenue')} className={`px-4 py-1 text-xs font-semibold rounded-md transition-all ${metric === 'revenue' ? (darkMode ? 'bg-zinc-800 text-white shadow-sm' : 'bg-white text-zinc-900 shadow-sm') : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Ingresos</button>
+              <button onClick={() => setMetric('quantity')} className={`px-4 py-1 text-xs font-semibold rounded-md transition-all ${metric === 'quantity' ? (darkMode ? 'bg-zinc-800 text-white shadow-sm' : 'bg-white text-zinc-900 shadow-sm') : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Unidades</button>
+          </div>
+      </div>
+      
+      <div className={`w-full h-[250px] p-2 rounded-xl border ${darkMode ? 'bg-[#0a0c10] border-zinc-800' : 'bg-white border-zinc-200'}`}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`colorMetric-${isCompareMode ? 'vs' : 'base'}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={themeColor} stopOpacity={0.3}/>
+                <stop offset="95%" stopColor={themeColor} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
+            <XAxis dataKey="name" stroke={textColor} fontSize={10} tickLine={false} axisLine={false} dy={10} minTickGap={20} />
+            <YAxis 
+              stroke={textColor} fontSize={10} tickLine={false} axisLine={false} 
+              tickFormatter={(value) => metric === 'revenue' ? formatCompact(value) : value} 
+              width={45}
+            />
+            <RechartsTooltip content={<CustomTooltip darkMode={darkMode} />} cursor={{ stroke: textColor, strokeWidth: 1, strokeDasharray: '3 3' }} />
+            <Area type="monotone" dataKey={metric === 'revenue' ? 'Ingresos' : 'Unidades'} stroke={themeColor} strokeWidth={3} fillOpacity={1} fill={`url(#colorMetric-${isCompareMode ? 'vs' : 'base'})`} activeDot={{ r: 6, strokeWidth: 0 }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+// NUEVO COMPONENTE: Barras de distribución ultra modernas
+const ModernDistribution = ({ data, colors, darkMode }) => {
+  if (!data || data.length === 0) return <div className="p-8 flex items-center justify-center text-sm font-medium opacity-50">Sin datos registrados</div>;
+
+  const total = data.reduce((acc, curr) => acc + curr.value, 0);
+
+  return (
+    <div className="flex flex-col gap-5 p-5">
+      {data.map((item, index) => {
+        const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
+        return (
+          <div key={item.name} className="flex flex-col gap-2">
+            <div className="flex justify-between items-end">
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[index % colors.length] }}></div>
+                <span className={`text-sm font-bold ${darkMode ? 'text-zinc-200' : 'text-zinc-700'}`}>{item.name}</span>
               </div>
-              <div className="bg-[#f2f2f2] p-5 rounded-2xl border border-gray-200 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#fcdb00]"></div>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 font-poppins"><i className="fas fa-university text-[#fcdb00] mr-1"></i> Transferir a:</p>
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                    <span className="font-bebas text-2xl text-[#111111] tracking-wider truncate">{CONFIG.paymentAlias}</span>
-                    <button onClick={copyAliasToClipboard} className="w-10 h-10 bg-[#f2f2f2] rounded-lg flex items-center justify-center text-[#111111] hover:bg-[#fcdb00] hover:text-[#111111] transition-colors flex-shrink-0"><i className="fas fa-copy"></i></button>
-                  </div>
-                  <div className="bg-gray-200/50 p-2.5 rounded-lg border border-gray-200 text-center">
-                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest font-poppins">TITULAR: {CONFIG.paymentName}</p>
-                  </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-black">{item.value}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${darkMode ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-100 text-zinc-500'}`}>{percent}%</span>
+              </div>
+            </div>
+            <div className={`h-2 w-full rounded-full overflow-hidden ${darkMode ? 'bg-zinc-800' : 'bg-zinc-100'}`}>
+              <div 
+                className="h-full rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${percent}%`, backgroundColor: colors[index % colors.length] }}
+              ></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// --- APP PRINCIPAL ---
+export default function App() {
+  const [user, setUser] = useState(() => localStorage.getItem('028_user') || null);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('028_dark_mode') === 'true');
+  const [isOffline, setIsOffline] = useState(false);
+  
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+      setToast({ message, type });
+      setTimeout(() => setToast(null), 3000);
+  };
+
+  useEffect(() => {
+    localStorage.setItem('028_dark_mode', darkMode);
+    if (darkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark');
+  }, [darkMode]);
+
+  const [activeTab, setActiveTab] = useState('home'); 
+  const [batches, setBatches] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [configError, setConfigError] = useState(false);
+  
+  const [expandedBatchId, setExpandedBatchId] = useState(null);
+  const [manualFinalizeDate, setManualFinalizeDate] = useState(getTodayDate());
+  const [globalMonth, setGlobalMonth] = useState('30days'); 
+  
+  const [customDateRange, setCustomDateRange] = useState({ start: getTodayDate(), end: getTodayDate() });
+  const [compareDateRange, setCompareDateRange] = useState({ start: getPreviousDayStr(getTodayDate()), end: getPreviousDayStr(getTodayDate()) });
+
+  const [newBatchName, setNewBatchName] = useState('');
+  const [newItem, setNewItem] = useState({ product: '', variant: '', costArs: '', initialStock: '' });
+  const [newExpense, setNewExpense] = useState({ description: '', amount: '', batchId: '', date: getTodayDate() });
+  
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingBatchId, setEditingBatchId] = useState(null);
+  const [editingBatchName, setEditingBatchName] = useState('');
+
+  const [selectedBatchStats, setSelectedBatchStats] = useState(null);
+  const [hiddenSuggestions, setHiddenSuggestions] = useState({ products: [], variants: [] });
+
+  const [salesSearch, setSalesSearch] = useState('');
+  const [salesSort, setSalesSort] = useState({ key: 'createdAt', direction: 'desc' });
+
+  const [saleGeneral, setSaleGeneral] = useState({ saleDate: getTodayDate(), shippingCost: '', shippingPrice: '', source: 'Instagram', isReseller: 'No', isNewClient: 'No' });
+  const [saleItems, setSaleItems] = useState([{ id: Date.now(), batchId: '', itemId: '', quantity: 1, unitPrice: '' }]);
+
+  const updateSaleItem = (id, field, value) => {
+    setSaleItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+  const addSaleItem = () => {
+    setSaleItems(prev => [...prev, { id: Date.now(), batchId: '', itemId: '', quantity: 1, unitPrice: '' }]);
+  };
+  const removeSaleItem = (id) => {
+    setSaleItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    if (firebaseConfig.apiKey === "TU_API_KEY_AQUI") { setConfigError(true); setLoading(false); return; }
+    
+    setLoading(true);
+
+    try {
+        const unsubBatches = onSnapshot(query(collection(db, 'batches'), orderBy('createdAt', 'desc')), (snap) => {
+            setBatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setIsOffline(false);
+        }, (error) => { setIsOffline(true); setLoading(false); });
+        
+        const unsubSales = onSnapshot(query(collection(db, 'sales'), orderBy('date', 'desc')), (snap) => {
+            setSales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setIsOffline(false);
+        }, (error) => setIsOffline(true));
+        
+        const unsubExp = onSnapshot(query(collection(db, 'expenses'), orderBy('date', 'desc')), (snap) => {
+            setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setIsOffline(false);
+        }, (error) => setIsOffline(true));
+
+        const unsubSettings = onSnapshot(doc(db, 'settings', 'autocomplete'), (docSnap) => {
+            if (docSnap.exists()) setHiddenSuggestions(docSnap.data());
+            else setHiddenSuggestions({ products: [], variants: [] });
+        }, (error) => console.error("Error settings:", error));
+        
+        setLoading(false);
+        return () => { unsubBatches(); unsubSales(); unsubExp(); unsubSettings(); };
+    } catch (e) {
+        setIsOffline(true);
+        setLoading(false);
+    }
+  }, [user]);
+
+  const { uniqueProducts, uniqueVariants } = useMemo(() => {
+      const prodsMap = new Map();
+      const varsMap = new Map();
+      batches.forEach(b => {
+          if (b.items) {
+              b.items.forEach(i => {
+                  if (i.product) {
+                      const p = i.product.trim();
+                      const key = p.toLowerCase();
+                      if (!hiddenSuggestions.products?.includes(key) && !prodsMap.has(key)) prodsMap.set(key, p);
+                  }
+                  if (i.variant) {
+                      const v = i.variant.trim();
+                      const key = v.toLowerCase();
+                      if (!hiddenSuggestions.variants?.includes(key) && !varsMap.has(key)) varsMap.set(key, v);
+                  }
+              });
+          }
+      });
+      return { uniqueProducts: Array.from(prodsMap.values()).sort(), uniqueVariants: Array.from(varsMap.values()).sort() };
+  }, [batches, hiddenSuggestions]);
+
+  const periodOptions = useMemo(() => {
+    const getLocalMonth = (isoString) => {
+      if (!isoString) return '';
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '';
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+    const months = new Set();
+    sales.forEach(s => { if(s.date) months.add(getLocalMonth(s.date)); });
+    expenses.forEach(e => { if(e.date) months.add(getLocalMonth(e.date)); });
+    batches.forEach(b => { if(b.createdAt) months.add(getLocalMonth(b.createdAt)); });
+    const sortedMonths = Array.from(months).filter(Boolean).sort().reverse();
+    
+    return [
+      { value: 'today', label: 'Diario (Hoy)' },
+      { value: 'week', label: 'Últimos 7 días' },
+      { value: '15days', label: 'Últimos 15 días' },
+      { value: '30days', label: 'Últimos 30 días' },
+      { value: 'custom', label: 'Rango Personalizado' },
+      { value: 'compare', label: 'Comparar Fechas (Mano a Mano)' },
+      { value: 'all', label: '-- Histórico Completo --' },
+      ...sortedMonths.map(m => {
+        const [year, month] = m.split('-');
+        const date = new Date(year, parseInt(month) - 1);
+        const monthName = date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+        return { value: m, label: monthName.charAt(0).toUpperCase() + monthName.slice(1) };
+      })
+    ];
+  }, [sales, expenses, batches]);
+
+  const analysisData = useMemo(() => {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      const calculateForRange = (start, end, isAll = false) => {
+          const inRange = (dateString) => {
+              if (!dateString) return false;
+              if (isAll) return true;
+              const d = new Date(dateString);
+              if (isNaN(d.getTime())) return false;
+              return d >= start && d <= end;
+          };
+
+          const fSales = sales.filter(s => inRange(s.date));
+          const fExp = expenses.filter(e => inRange(e.date));
+          const fBatches = batches.filter(b => inRange(b.createdAt));
+
+          let totalRevenue = 0, itemsSold = 0, totalShippingProfit = 0;
+          const sourceCounts = {};
+          const typeCounts = { Revendedor: 0, Final: 0 };
+
+          fSales.forEach(s => {
+              totalRevenue += s.totalSaleRaw || 0;
+              itemsSold += s.quantity || 0;
+              totalShippingProfit += (s.totalSaleRaw || 0) - ((s.unitPrice || 0) * (s.quantity || 0));
+              const src = s.source || 'Otro';
+              sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+              if (s.isReseller === 'Si' || s.isReseller === true) typeCounts.Revendedor++; else typeCounts.Final++;
+          });
+
+          const totalInvestment = fBatches.reduce((acc, b) => acc + (b.items || []).reduce((a, i) => a + ((i.costArs || 0) * (i.initialStock || 0)), 0), 0);
+          const totalGlobalExpenses = fExp.reduce((acc, e) => acc + (e.amount || 0), 0);
+          const costOfSoldFiltered = fSales.reduce((acc, s) => acc + ((s.costArsAtSale || 0) * (s.quantity || 0)), 0);
+
+          const grossProfit = totalRevenue - costOfSoldFiltered;
+          const netProfit = grossProfit - totalGlobalExpenses;
+          const cashBalance = totalRevenue - totalInvestment - totalGlobalExpenses;
+
+          const currentStockValue = batches.filter(b => !b.finalizedAt).reduce((acc, b) => acc + (b.items || []).reduce((a, i) => a + ((i.costArs || 0) * (i.currentStock || 0)), 0), 0);
+
+          const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+          const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+          let daysActive = isAll ? 1 : Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+          const dailyAvgItems = daysActive > 0 ? itemsSold / daysActive : 0;
+
+          const pieSourceData = Object.entries(sourceCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+          const pieTypeData = [{ name: 'Consumidor', value: typeCounts.Final }, { name: 'Revendedor', value: typeCounts.Revendedor }].filter(d => d.value > 0);
+
+          const uniqueDateStrs = [...new Set(fSales.filter(s => s.date).map(s => {
+              const d = new Date(s.date);
+              return isNaN(d.getTime()) ? null : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          }).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+
+          let currentStreak = 0;
+          if (uniqueDateStrs.length > 0) {
+              const todayStr = getTodayDate();
+              const yesterdayStr = getPreviousDayStr(todayStr);
+              let checkDate = '';
+              if (uniqueDateStrs[0] === todayStr) { currentStreak = 1; checkDate = todayStr; } 
+              else if (uniqueDateStrs[0] === yesterdayStr) { currentStreak = 1; checkDate = yesterdayStr; }
+
+              if (currentStreak === 1) {
+                  for (let i = 1; i < uniqueDateStrs.length; i++) {
+                      const expectedStr = getPreviousDayStr(checkDate);
+                      if (uniqueDateStrs[i] === expectedStr) { currentStreak++; checkDate = expectedStr; } 
+                      else break;
+                  }
+              }
+          }
+
+          return {
+              totalRevenue, totalInvestment, totalGlobalExpenses, grossProfit, grossMargin,
+              totalShippingProfit, netProfit, netMargin, cashBalance, currentStockValue,
+              itemsSold, salesCount: fSales.length, sourceCounts, typeCounts, dailyAvgItems,
+              daysActive, currentStreak, filteredSales: fSales, pieSourceData, pieTypeData
+          };
+      };
+
+      let bStart, bEnd, isAll = false;
+      if (globalMonth === 'today') {
+          bStart = todayStart; bEnd = new Date(todayStart); bEnd.setHours(23,59,59,999);
+      } else if (globalMonth === 'week') {
+          bStart = new Date(todayStart); bStart.setDate(bStart.getDate() - 6);
+          bEnd = new Date(todayStart); bEnd.setHours(23,59,59,999);
+      } else if (globalMonth === '15days') {
+           bStart = new Date(todayStart); bStart.setDate(bStart.getDate() - 14);
+           bEnd = new Date(todayStart); bEnd.setHours(23,59,59,999);
+      } else if (globalMonth === '30days') {
+           bStart = new Date(todayStart); bStart.setDate(bStart.getDate() - 29);
+           bEnd = new Date(todayStart); bEnd.setHours(23,59,59,999);
+      } else if (globalMonth === 'custom' || globalMonth === 'compare') {
+           const [sy, sm, sd] = customDateRange.start.split('-').map(Number);
+           const [ey, em, ed] = customDateRange.end.split('-').map(Number);
+           bStart = new Date(sy, sm - 1, sd, 0, 0, 0);
+           bEnd = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+      } else if (globalMonth === 'all') {
+           isAll = true; bStart = new Date(0); bEnd = new Date();
+      } else {
+           const [y, m] = globalMonth.split('-').map(Number);
+           bStart = new Date(y, m - 1, 1);
+           bEnd = new Date(y, m, 0, 23, 59, 59, 999);
+      }
+
+      const baseStats = calculateForRange(bStart, bEnd, isAll);
+
+      let prevBaseStats = null;
+      let compareStats = null;
+
+      if (globalMonth === 'compare') {
+           const [csy, csm, csd] = compareDateRange.start.split('-').map(Number);
+           const [cey, cem, ced] = compareDateRange.end.split('-').map(Number);
+           const cStart = new Date(csy, csm - 1, csd, 0, 0, 0);
+           const cEnd = new Date(cey, cem - 1, ced, 23, 59, 59, 999);
+           compareStats = calculateForRange(cStart, cEnd, false);
+      } else if (globalMonth !== 'all' && globalMonth !== 'custom') {
+           const diffTime = bEnd.getTime() - bStart.getTime();
+           const pEnd = new Date(bStart.getTime() - 1);
+           const pStart = new Date(pEnd.getTime() - diffTime);
+           prevBaseStats = calculateForRange(pStart, pEnd, false);
+      }
+
+      return { baseStats, compareStats, prevBaseStats };
+  }, [sales, batches, expenses, globalMonth, customDateRange, compareDateRange]);
+
+  const teamStats = useMemo(() => {
+      const stats = {};
+      analysisData.baseStats.filteredSales.forEach(s => {
+          const seller = normalizeSellerName(s.seller);
+          if (!stats[seller]) stats[seller] = { count: 0, revenue: 0, items: 0 };
+          stats[seller].count += 1;
+          stats[seller].revenue += s.totalSaleRaw || 0;
+          stats[seller].items += s.quantity || 0;
+      });
+      return Object.entries(stats).map(([name, data]) => ({ name, ...data })).sort((a,b) => b.revenue - a.revenue);
+  }, [analysisData.baseStats.filteredSales]);
+
+  const newClientsList = useMemo(() => {
+      return analysisData.baseStats.filteredSales
+          .filter(s => s.isNewClient === true || s.isNewClient === 'Si')
+          .map(s => ({...s, seller: normalizeSellerName(s.seller)}))
+          .sort((a,b) => new Date(b.date) - new Date(a.date));
+  }, [analysisData.baseStats.filteredSales]);
+
+  const batchAnalysis = useMemo(() => {
+    if (!selectedBatchStats) return null;
+    const batch = batches.find(b => b.id === selectedBatchStats);
+    if (!batch) return null;
+
+    const batchSales = sales.filter(s => s.batchId === batch.id);
+    const batchExpenses = expenses.filter(e => e.batchId === batch.id);
+    let totalRevenue = 0, itemsSold = 0, totalShippingProfit = 0;
+    const sourceCounts = {}, typeCounts = { Revendedor: 0, Final: 0 };
+
+    batchSales.forEach(s => {
+      totalRevenue += s.totalSaleRaw || 0;
+      itemsSold += s.quantity || 0;
+      const saleShippingProfit = (s.totalSaleRaw || 0) - ((s.unitPrice || 0) * (s.quantity || 0));
+      totalShippingProfit += saleShippingProfit;
+      const src = s.source || 'Otro';
+      sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+      if (s.isReseller === 'Si' || s.isReseller === true) typeCounts.Revendedor++; else typeCounts.Final++;
+    });
+
+    const totalInvestment = (batch.items || []).reduce((acc, i) => acc + ((i.costArs || 0) * (i.initialStock || 0)), 0);
+    const costOfSold = batchSales.reduce((acc, s) => acc + ((s.costArsAtSale || 0) * (s.quantity || 0)), 0);
+    const grossProfit = totalRevenue - costOfSold; 
+    const totalBatchExpenses = batchExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+    const netProfit = grossProfit - totalBatchExpenses;
+    const cashBalance = totalRevenue - totalInvestment - totalBatchExpenses;
+    
+    const currentStockValue = batch.finalizedAt ? 0 : (batch.items || []).reduce((acc, item) => acc + ((item.costArs || 0) * (item.currentStock || 0)), 0);
+
+    const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    const createdDate = batch.createdAt ? new Date(batch.createdAt) : new Date();
+    const endDate = batch.finalizedAt ? new Date(batch.finalizedAt) : new Date(); 
+    const diffTime = Math.max(0, isNaN(endDate.getTime()) || isNaN(createdDate.getTime()) ? 0 : endDate - createdDate);
+    const daysActive = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const dailyAvgItems = itemsSold / daysActive;
+    const totalInitStock = (batch.items || []).reduce((acc, i) => acc + (i.initialStock || 0), 0);
+    const progress = totalInitStock > 0 ? (itemsSold / totalInitStock) * 100 : 0;
+
+    const uniqueDateStrs = [...new Set(batchSales.filter(s=>s.date).map(s => {
+        const d = new Date(s.date);
+        return isNaN(d.getTime()) ? null : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+
+    let currentStreak = 0;
+    if (uniqueDateStrs.length > 0) {
+        const todayStr = getTodayDate();
+        const yesterdayStr = getPreviousDayStr(todayStr);
+        let checkDate = '';
+        if (uniqueDateStrs[0] === todayStr) { currentStreak = 1; checkDate = todayStr; } 
+        else if (uniqueDateStrs[0] === yesterdayStr) { currentStreak = 1; checkDate = yesterdayStr; }
+
+        if (currentStreak === 1) {
+            for (let i = 1; i < uniqueDateStrs.length; i++) {
+                const expectedStr = getPreviousDayStr(checkDate);
+                if (uniqueDateStrs[i] === expectedStr) { currentStreak++; checkDate = expectedStr; } 
+                else break;
+            }
+        }
+    }
+
+    const pieSourceData = Object.entries(sourceCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+    const pieTypeData = [
+      { name: 'Consumidor', value: typeCounts.Final },
+      { name: 'Revendedor', value: typeCounts.Revendedor }
+    ].filter(d => d.value > 0);
+
+    return { 
+        batch, salesCount: batchSales.length, itemsSold, totalRevenue, totalInvestment, 
+        grossProfit, grossMargin, totalShippingProfit, totalBatchExpenses, netProfit, netMargin, cashBalance, 
+        progress, currentStockValue, sourceCounts, typeCounts, daysActive, dailyAvgItems, currentStreak,
+        pieSourceData, pieTypeData 
+    };
+  }, [selectedBatchStats, sales, batches, expenses]);
+
+  const processedSales = useMemo(() => {
+    let result = [...sales].filter(s => s != null);
+
+    if (salesSearch) {
+      const lowerQuery = salesSearch.toLowerCase();
+      result = result.filter(s => {
+        const dateStrSafe = safeDateStr(s.date);
+        const normalizedSeller = normalizeSellerName(s.seller).toLowerCase();
+        return (
+          (s.productName || '').toLowerCase().includes(lowerQuery) ||
+          (s.batchName || '').toLowerCase().includes(lowerQuery) ||
+          dateStrSafe.toLowerCase().includes(lowerQuery) ||
+          normalizedSeller.includes(lowerQuery)
+        );
+      });
+    }
+
+    result.sort((a, b) => {
+      let valA, valB;
+      
+      switch (salesSort.key) {
+        case 'date':
+          valA = safeDateTime(a.date);
+          valB = safeDateTime(b.date);
+          break;
+        case 'createdAt':
+          valA = safeDateTime(a.createdAt || a.date);
+          valB = safeDateTime(b.createdAt || b.date);
+          break;
+        case 'productName':
+          valA = (a.productName || '').toLowerCase();
+          valB = (b.productName || '').toLowerCase();
+          break;
+        case 'profit':
+          valA = (a.totalSaleRaw || 0) - ((a.costArsAtSale || 0) * (a.quantity || 0));
+          valB = (b.totalSaleRaw || 0) - ((b.costArsAtSale || 0) * (b.quantity || 0));
+          break;
+        case 'totalSaleRaw':
+          valA = a.totalSaleRaw || 0;
+          valB = b.totalSaleRaw || 0;
+          break;
+        default:
+          valA = a[salesSort.key] || '';
+          valB = b[salesSort.key] || '';
+      }
+
+      if (valA < valB) return salesSort.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return salesSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [sales, salesSearch, salesSort]);
+
+  const groupedSales = useMemo(() => {
+    const map = {};
+    const result = [];
+    processedSales.forEach(s => {
+      const key = s.ticketId || s.id; 
+      if (!map[key]) {
+        map[key] = {
+          ticketId: key,
+          date: s.date,
+          createdAt: s.createdAt || s.date,
+          totalSaleRaw: 0,
+          totalProfit: 0,
+          isReseller: s.isReseller, 
+          isNewClient: s.isNewClient, 
+          seller: normalizeSellerName(s.seller),
+          items: [],
+          originalSales: []
+        };
+        result.push(map[key]); 
+      }
+      map[key].items.push({
+        quantity: s.quantity,
+        productName: s.productName,
+        variant: s.variant,
+        batchName: s.batchName,
+        unitPrice: s.unitPrice
+      });
+      map[key].totalSaleRaw += (s.totalSaleRaw || 0);
+      map[key].totalProfit += ((s.totalSaleRaw || 0) - ((s.costArsAtSale || 0) * (s.quantity || 0)));
+      map[key].originalSales.push(s);
+    });
+    return result;
+  }, [processedSales]);
+
+  const toggleSort = (key) => {
+    setSalesSort(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+  
+  const handleExportSales = () => {
+      const headers = ['Fecha', 'Lote', 'Producto', 'Variante', 'Cantidad', 'Precio Unitario', 'Total Venta', 'Costo Unitario', 'Ganancia Envio', 'Origen', 'Revendedor', 'Cliente Nuevo', 'Vendedor'];
+      const rows = processedSales.map(s => [
+          safeDateStr(s.date), s.batchName || '', s.productName || '', s.variant || '', 
+          s.quantity || 0, s.unitPrice || 0, s.totalSaleRaw || 0, s.costArsAtSale || 0, 
+          ((s.totalSaleRaw || 0) - ((s.unitPrice || 0) * (s.quantity || 0))), s.source || '', s.isReseller ? 'Si' : 'No', s.isNewClient ? 'Si' : 'No', normalizeSellerName(s.seller)
+      ]);
+      exportToCSV('historial_ventas.csv', [headers, ...rows]);
+      showToast('Historial descargado con éxito', 'success');
+  };
+
+  const handleExportBatches = () => {
+      const headers = ['Lote', 'Fecha Creacion', 'Estado', 'Producto', 'Variante', 'Costo Unitario', 'Stock Inicial', 'Stock Actual'];
+      const rows = [];
+      batches.forEach(b => {
+          if (!b.items || b.items.length === 0) {
+              rows.push([b.name || '', safeDateStr(b.createdAt), b.finalizedAt ? 'Finalizado' : 'Activo', '', '', '', '', '']);
+          } else {
+              b.items.forEach(i => {
+                  rows.push([b.name || '', safeDateStr(b.createdAt), b.finalizedAt ? 'Finalizado' : 'Activo', i.product || '', i.variant || '', i.costArs || 0, i.initialStock || 0, i.currentStock || 0]);
+              });
+          }
+      });
+      exportToCSV('inventario_lotes.csv', [headers, ...rows]);
+      showToast('Inventario descargado', 'success');
+  };
+
+  const handleCreateBatch = async () => {
+    if (!newBatchName) return showToast("Debes ingresar un nombre para el lote", 'error');
+    try { await addDoc(collection(db, 'batches'), { name: newBatchName, createdAt: new Date().toISOString(), items: [] }); setNewBatchName(''); showToast("Lote creado correctamente", 'success'); } catch (e) { showToast("Error: " + e.message, 'error'); }
+  };
+
+  const handleSaveEditBatchName = async (batchId) => {
+    if (!editingBatchName.trim()) return showToast("El nombre no puede estar vacío", "error");
+    try {
+        await updateDoc(doc(db, 'batches', batchId), { name: editingBatchName });
+        
+        const salesToUpdate = sales.filter(s => s.batchId === batchId);
+        for (const s of salesToUpdate) {
+            await updateDoc(doc(db, 'sales', s.id), { batchName: editingBatchName });
+        }
+        
+        const expensesToUpdate = expenses.filter(e => e.batchId === batchId);
+        for (const e of expensesToUpdate) {
+            await updateDoc(doc(db, 'expenses', e.id), { batchName: editingBatchName });
+        }
+        
+        setEditingBatchId(null);
+        showToast("Nombre actualizado en todos los registros", "success");
+    } catch (e) {
+        showToast("Error al renombrar: " + e.message, "error");
+    }
+  };
+
+  const handleDeleteBatch = async (id) => { if (window.confirm('¿Borrar carpeta completa? Se perderá el historial interno.')) await deleteDoc(doc(db, 'batches', id)); };
+
+  const handleUpdateBatchStatus = async (batchId, isFinalizing) => {
+    if (isFinalizing) {
+        if (!manualFinalizeDate) return showToast("Selecciona una fecha", 'error');
+        if (!window.confirm(`¿Confirmar que el stock se terminó el día ${manualFinalizeDate}?`)) return;
+        const [year, month, day] = manualFinalizeDate.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day, 12, 0, 0);
+        try { await updateDoc(doc(db, 'batches', batchId), { finalizedAt: dateObj.toISOString() }); showToast("Lote Finalizado", 'success'); } catch (e) { showToast("Error: " + e.message, 'error'); }
+    } else {
+        if (!window.confirm("¿Reactivar este lote? Volverá a contar los días para el promedio diario.")) return;
+        try { await updateDoc(doc(db, 'batches', batchId), { finalizedAt: null }); showToast("Lote Reactivado", 'success'); } catch (e) { showToast("Error: " + e.message, 'error'); }
+    }
+  };
+
+  const handleAddItemToBatch = async (batchId) => {
+    if (!newItem.product || !newItem.costArs || !newItem.initialStock) return showToast("Faltan datos esenciales", 'error');
+    const batch = batches.find(b => b.id === batchId);
+    if (!batch) return;
+    const newItemData = {
+      id: Date.now() + Math.random().toString(36).substr(2, 9),
+      product: newItem.product, variant: newItem.variant || 'Único',
+      costArs: parseFloat(newItem.costArs) || 0,
+      initialStock: parseInt(newItem.initialStock) || 0,
+      currentStock: parseInt(newItem.initialStock) || 0,
+    };
+    try { await updateDoc(doc(db, 'batches', batchId), { items: [...(batch.items || []), newItemData] }); setNewItem({ product: '', variant: '', costArs: '', initialStock: '' }); showToast("Producto agregado", 'success'); } catch (e) { showToast("Error: " + e.message, 'error'); }
+  };
+
+  const handleDeleteItemFromBatch = async (batchId, itemId) => {
+    if (!window.confirm('¿Eliminar este producto del lote?')) return;
+    const batch = batches.find(b => b.id === batchId);
+    if (!batch) return;
+    const updatedItems = batch.items.filter(i => i.id !== itemId);
+    try { await updateDoc(doc(db, 'batches', batchId), { items: updatedItems }); showToast("Producto eliminado", 'success'); } catch (e) { showToast("Error al borrar: " + e.message, 'error'); }
+  };
+
+  const handleSaveEditItem = async (batchId) => {
+    if (!editingItem) return;
+    const batch = batches.find(b => b.id === batchId);
+    if (!batch) return;
+
+    const oldItem = batch.items.find(i => i.id === editingItem.id);
+    if (!oldItem) return;
+
+    const newInitialStock = parseInt(editingItem.initialStock) || 0;
+    const newCost = parseFloat(editingItem.costArs) || 0;
+    
+    const diffStock = newInitialStock - (oldItem.initialStock || 0);
+    let newCurrentStock = (oldItem.currentStock || 0) + diffStock;
+    if (newCurrentStock < 0) newCurrentStock = 0;
+
+    const updatedItem = {
+      ...oldItem,
+      product: editingItem.product,
+      variant: editingItem.variant,
+      costArs: newCost,
+      initialStock: newInitialStock,
+      currentStock: newCurrentStock
+    };
+
+    const newItems = batch.items.map(i => i.id === oldItem.id ? updatedItem : i);
+    
+    try {
+      await updateDoc(doc(db, 'batches', batchId), { items: newItems });
+      
+      const salesToUpdate = sales.filter(s => s.itemId === oldItem.id);
+      for (const s of salesToUpdate) {
+        await updateDoc(doc(db, 'sales', s.id), {
+          productName: updatedItem.product,
+          variant: updatedItem.variant,
+          costArsAtSale: newCost, 
+        });
+      }
+
+      setEditingItem(null);
+      showToast(`Actualizado. Se reflejó en ${salesToUpdate.length} venta(s) histórica(s).`, "success");
+    } catch (e) {
+      showToast("Error al actualizar: " + e.message, "error");
+    }
+  };
+
+  const handleAddSale = async () => {
+    for (let i = 0; i < saleItems.length; i++) {
+        const item = saleItems[i];
+        if (!item.batchId) return showToast(`Falta seleccionar la carpeta en el producto ${i + 1}.`, 'error');
+        if (!item.itemId) return showToast(`Falta seleccionar el artículo en el producto ${i + 1}.`, 'error');
+        if (!item.unitPrice) return showToast(`Ingresa el precio del producto ${i + 1}.`, 'error');
+        const qty = parseInt(item.quantity) || 1;
+        if (qty < 1) return showToast(`La cantidad mínima es 1 en el producto ${i + 1}.`, 'error');
+    }
+
+    const stockNeeds = {};
+    saleItems.forEach(si => {
+        stockNeeds[si.itemId] = (stockNeeds[si.itemId] || 0) + (parseInt(si.quantity) || 1);
+    });
+
+    for (const itemId in stockNeeds) {
+        let foundItem = null;
+        batches.forEach(b => {
+            const it = b.items?.find(i => i.id === itemId);
+            if (it) foundItem = it;
+        });
+        if (!foundItem) return showToast("Producto no encontrado.", "error");
+        if (foundItem.currentStock < stockNeeds[itemId]) {
+            return showToast(`Stock insuficiente de ${foundItem.product}. Disponibles: ${foundItem.currentStock}.`, 'error');
+        }
+    }
+
+    const shippingProfit = parseFloat(saleGeneral.shippingPrice || 0) - parseFloat(saleGeneral.shippingCost || 0);
+    const [year, month, day] = saleGeneral.saleDate.split('-').map(Number);
+    const saleDateObj = new Date(year, month - 1, day, new Date().getHours(), new Date().getMinutes());
+    
+    const createdAtStr = new Date().toISOString();
+    const dateStr = saleDateObj.toISOString();
+    const ticketId = Date.now().toString(); 
+
+    let totalCashIn = 0;
+    const batchUpdates = {};
+
+    try {
+        for (let i = 0; i < saleItems.length; i++) {
+            const si = saleItems[i];
+            const isFirstItem = i === 0; 
+            const qty = parseInt(si.quantity) || 1;
+            const uPrice = parseFloat(si.unitPrice) || 0;
+
+            const batch = batches.find(b => b.id === si.batchId);
+            const item = batch.items.find(it => it.id === si.itemId);
+
+            const itemShippingProfit = isFirstItem ? shippingProfit : 0;
+            const itemTotalRaw = (uPrice * qty) + itemShippingProfit;
+            totalCashIn += itemTotalRaw;
+
+            const saleData = {
+                ticketId,
+                createdAt: createdAtStr,
+                date: dateStr,
+                batchId: batch.id,
+                batchName: batch.name,
+                itemId: item.id,
+                productName: item.product,
+                variant: item.variant,
+                quantity: qty,
+                unitPrice: uPrice,
+                totalSaleRaw: itemTotalRaw,
+                costArsAtSale: item.costArs,
+                shippingCostArs: isFirstItem ? parseFloat(saleGeneral.shippingCost || 0) : 0,
+                source: saleGeneral.source,
+                isReseller: saleGeneral.isReseller === 'Si',
+                isNewClient: saleGeneral.isNewClient === 'Si',
+                seller: '028 Import' 
+            };
+
+            await addDoc(collection(db, 'sales'), saleData);
+
+            if (!batchUpdates[batch.id]) {
+                batchUpdates[batch.id] = { items: [...batch.items], finalizedAt: batch.finalizedAt };
+            }
+            const bUpdate = batchUpdates[batch.id];
+            const itemIdx = bUpdate.items.findIndex(x => x.id === item.id);
+            if (itemIdx !== -1) {
+                bUpdate.items[itemIdx].currentStock -= qty;
+            }
+        }
+
+        for (const bId in batchUpdates) {
+            const bData = batchUpdates[bId];
+            const allZero = bData.items.every(x => x.currentStock <= 0);
+            const updates = { items: bData.items };
+            if (allZero && !bData.finalizedAt) updates.finalizedAt = new Date().toISOString();
+            await updateDoc(doc(db, 'batches', bId), updates);
+        }
+
+        showToast(`Pedido registrado. Ingreso total: ${formatMoney(totalCashIn)}`, 'success');
+        
+        setSaleGeneral({ ...saleGeneral, shippingCost: '', shippingPrice: '' });
+        setSaleItems([{ id: Date.now(), batchId: '', itemId: '', quantity: 1, unitPrice: '' }]);
+
+    } catch (e) {
+        showToast('Error al guardar: ' + e.message, 'error');
+    }
+  };
+
+  const handleDeleteTicket = async (group) => {
+    if (!window.confirm(`¿Anular pedido completo (${group.items.length} productos)? Se devolverá el stock.`)) return;
+    try {
+      for (const sale of group.originalSales) {
+        await deleteDoc(doc(db, 'sales', sale.id));
+        if (sale.batchId && sale.itemId) {
+          const batch = batches.find(b => b.id === sale.batchId);
+          if (batch) {
+            const itemIndex = batch.items.findIndex(i => i.id === sale.itemId);
+            if (itemIndex !== -1) {
+              const newItems = [...batch.items];
+              newItems[itemIndex].currentStock += sale.quantity;
+              await updateDoc(doc(db, 'batches', batch.id), { items: newItems });
+            }
+          }
+        }
+      }
+      showToast("Pedido anulado correctamente", 'success');
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  };
+
+  const handleAddExpense = async () => {
+    if (!newExpense.description || !newExpense.amount || !newExpense.date) return showToast('Completa descripción, fecha y monto', 'error');
+    let batchName = 'General';
+    if (newExpense.batchId) {
+        const foundBatch = batches.find(b => b.id === newExpense.batchId);
+        if (foundBatch) batchName = foundBatch.name;
+    }
+    
+    const [y, m, d] = newExpense.date.split('-');
+    const expenseDateStr = new Date(y, m - 1, d, 12, 0, 0).toISOString();
+
+    await addDoc(collection(db, 'expenses'), { 
+        date: expenseDateStr, description: newExpense.description, amount: parseFloat(newExpense.amount),
+        batchId: newExpense.batchId || null, batchName: batchName
+    });
+    setNewExpense({ description: '', amount: '', batchId: '', date: getTodayDate() });
+    showToast('Gasto asentado', 'success');
+  };
+
+  const handleDeleteExpense = async (id) => {
+      await deleteDoc(doc(db, 'expenses', id));
+      showToast('Gasto eliminado', 'success');
+  };
+
+  const handleLogin = (e) => { 
+    e.preventDefault(); 
+    const val = e.target.password.value; 
+    if(val === '1717') { localStorage.setItem('028_user', 'Admin'); setUser('Admin'); showToast('Bienvenido', 'success'); } 
+    else showToast('Contraseña incorrecta', 'error');
+  };
+
+  if (!user) return (
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500 ${darkMode ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
+      <div className={`p-8 rounded-2xl shadow-xl w-full max-w-md text-center border ${darkMode ? 'bg-[#131824] border-zinc-800/80' : 'bg-white border-zinc-200'}`}>
+        <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/30"><Package size={32} className="text-white" /></div>
+        <h1 className={`text-3xl font-black mb-2 tracking-tight ${darkMode ? 'text-white' : 'text-zinc-900'}`}>028 IMPORT</h1>
+        <p className="text-zinc-500 mb-8 text-xs font-semibold uppercase tracking-widest">Workspace Empresarial</p>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input type="password" name="password" placeholder="Clave de seguridad" className={`h-12 w-full border p-3.5 rounded-xl text-center font-bold text-sm outline-none transition-colors ${darkMode ? 'bg-[#0a0c10] border-zinc-800 text-white focus:border-indigo-500' : 'bg-zinc-50 border-zinc-200 focus:border-indigo-500 text-zinc-900'}`} autoFocus />
+          <button className="h-12 w-full bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all text-sm shadow-md">Autenticar</button>
+        </form>
+      </div>
+      <div className="mt-8 flex gap-4">
+          <button onClick={() => setDarkMode(false)} className={`p-3 rounded-full border ${!darkMode ? 'bg-white shadow-sm border-zinc-200 text-indigo-600' : 'bg-transparent border-transparent text-zinc-600'}`}><Sun size={20}/></button>
+          <button onClick={() => setDarkMode(true)} className={`p-3 rounded-full border ${darkMode ? 'bg-[#131824] shadow-sm border-zinc-800 text-indigo-400' : 'bg-transparent border-transparent text-zinc-400'}`}><Moon size={20}/></button>
+      </div>
+    </div>
+  );
+
+  if (configError) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 text-white">
+      <div className="max-w-lg text-center space-y-4 border border-zinc-800 p-8 rounded-lg bg-[#131824]">
+        <AlertTriangle size={48} className="mx-auto text-amber-500" />
+        <h1 className="text-xl font-bold tracking-tight">Falta Configuración</h1>
+        <p className="text-zinc-400 text-sm">Debes configurar las claves de Firebase en el código fuente.</p>
+      </div>
+    </div>
+  );
+
+  const TABS = [
+      { id: 'home', icon: Activity, label: 'Inicio' }, 
+      { id: 'sales', icon: ShoppingCart, label: 'Ventas' }, 
+      { id: 'batches', icon: FolderOpen, label: 'Lotes' }, 
+      { id: 'analysis', icon: BarChart3, label: 'Análisis' }, 
+      { id: 'expenses', icon: Wallet, label: 'Gastos' }
+  ];
+
+  return (
+    <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-[#0B0F19] text-zinc-100' : 'bg-slate-50 text-zinc-900'}`}>
+      
+      {toast && (
+          <div className={`fixed bottom-24 md:bottom-8 right-4 md:right-8 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50 border ${toast.type === 'error' ? 'bg-red-600/95 border-red-500 text-white' : 'bg-zinc-900/95 border-zinc-800 text-white'}`}>
+             {toast.type === 'error' ? <XCircle size={18} className="text-red-200"/> : <CheckCircle size={18} className="text-emerald-400"/>}
+             <span className="font-medium text-sm tracking-wide">{toast.message}</span>
+          </div>
+      )}
+
+      <datalist id="products-list">{uniqueProducts.map(p => <option key={p} value={p} />)}</datalist>
+      <datalist id="variants-list">{uniqueVariants.map(v => <option key={v} value={v} />)}</datalist>
+
+      <aside className={`hidden md:flex flex-col w-60 border-r flex-shrink-0 transition-colors z-20 ${darkMode ? 'bg-[#0f1115] border-zinc-800/80' : 'bg-white border-zinc-200 shadow-sm'}`}>
+        <div className="p-5 pb-2 border-b dark:border-zinc-800/80">
+            <div className="flex items-center gap-3 mb-5">
+                <div className="bg-indigo-600 p-2 rounded-lg text-white shadow-sm shadow-indigo-600/20"><Package size={20} strokeWidth={2.5} /></div>
+                <div>
+                    <h1 className="text-lg font-black tracking-tight leading-none">028 IMPORT</h1>
+                    <p className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>Workspace</p>
+                </div>
+            </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-5 px-3 space-y-1 custom-scrollbar">
+            <div className={`text-xs font-semibold px-3 mb-2 ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>Navegación</div>
+            {TABS.map(tab => (
+            <button 
+                key={tab.id} 
+                onClick={() => setActiveTab(tab.id)} 
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === tab.id ? (darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-700') : (darkMode ? 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900')}`}
+            >
+                <tab.icon size={18} strokeWidth={activeTab === tab.id ? 2.5 : 2} /> {tab.label}
+            </button>
+            ))}
+        </div>
+
+        <div className="p-4 border-t dark:border-zinc-800/80 space-y-2">
+            {isOffline && (
+                <div className="flex items-center justify-center gap-2 text-xs font-bold text-red-500 bg-red-500/10 p-2 rounded-lg mb-2">
+                    <WifiOff size={14}/> Modo Offline
+                </div>
+            )}
+            <div className={`flex items-center justify-between p-2 rounded-lg border ${darkMode ? 'bg-[#131824] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-xs ${darkMode ? 'bg-indigo-900/50 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>{user?.charAt(0)}</div>
+                    <div className="flex flex-col items-start">
+                        <span className="text-xs font-bold">{user}</span>
+                        <span className={`text-[10px] font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Admin</span>
+                    </div>
+                </div>
+                <button onClick={() => { localStorage.removeItem('028_user'); setUser(null); }} className={`p-2 rounded-md transition-colors ${darkMode ? 'text-zinc-500 hover:bg-red-500/10 hover:text-red-400' : 'text-zinc-400 hover:bg-red-50 hover:text-red-600'}`} title="Cerrar sesión">
+                    <LogOut size={16} />
+                </button>
+            </div>
+            <button onClick={() => setDarkMode(!darkMode)} className={`w-full flex items-center justify-center gap-2 h-10 rounded-lg font-medium text-sm border transition-colors ${darkMode ? 'border-zinc-800 hover:bg-zinc-800/50 text-zinc-300' : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'}`}>
+                {darkMode ? <><Sun size={14}/> Modo Claro</> : <><Moon size={14}/> Modo Oscuro</>}
+            </button>
+        </div>
+      </aside>
+
+      <nav className={`md:hidden fixed bottom-0 w-full z-40 border-t pb-safe transition-colors ${darkMode ? 'bg-[#0f1115]/90 backdrop-blur-xl border-zinc-800/80 text-zinc-400' : 'bg-white/90 backdrop-blur-xl border-zinc-200 text-zinc-500'}`}>
+          <div className="flex justify-around items-center h-16 px-2">
+            {TABS.map(tab => (
+              <button 
+                  key={tab.id} 
+                  onClick={() => setActiveTab(tab.id)} 
+                  className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${activeTab === tab.id ? (darkMode ? 'text-indigo-400' : 'text-indigo-600') : 'hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+              >
+                  <tab.icon size={20} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+                  <span className={`text-[10px] font-medium ${activeTab === tab.id ? 'font-bold' : ''}`}>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+      </nav>
+
+      <main className="flex-1 overflow-y-auto relative w-full custom-scrollbar">
+        
+        <header className={`md:hidden sticky top-0 z-30 flex justify-between items-center px-4 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-[#0B0F19]/80 border-zinc-800/80' : 'bg-slate-50/80 border-zinc-200'}`}>
+            <div className="flex items-center gap-3">
+                <div className="bg-indigo-600 p-1.5 rounded-md text-white"><Package size={16} /></div>
+                <h1 className="font-bold tracking-tight text-base">028 IMPORT</h1>
+            </div>
+            <div className="flex items-center gap-3">
+                {isOffline && <WifiOff size={16} className="text-red-500" />}
+                <button onClick={() => setDarkMode(!darkMode)} className={darkMode ? 'text-zinc-400' : 'text-zinc-500'}>{darkMode ? <Sun size={18} /> : <Moon size={18} />}</button>
+            </div>
+        </header>
+
+        <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-[1400px] mx-auto space-y-6">
+            
+            <div className="hidden md:flex justify-between items-end mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">{TABS.find(t => t.id === activeTab)?.label}</h2>
+                    <p className={`text-sm font-medium mt-1 ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Gestiona y analiza tus datos de negocio.</p>
+                </div>
+            </div>
+
+            {/* --- PESTAÑA INICIO --- */}
+            {activeTab === 'home' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                    <div className={`p-4 rounded-xl border flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 ${darkMode ? 'bg-[#131824] border-zinc-800/80' : 'bg-white border-zinc-200'}`}>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-500"><Calendar size={20}/></div>
+                            <div>
+                                <h3 className="font-bold text-sm">Periodo de Análisis</h3>
+                                <p className={`text-xs ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Selecciona el rango de tiempo a evaluar</p>
+                            </div>
+                        </div>
+                        <div className="w-full lg:w-auto flex flex-col md:flex-row gap-4 lg:items-center">
+                            <div className="w-full md:w-64 flex-shrink-0">
+                                <Select 
+                                    darkMode={darkMode}
+                                    value={globalMonth} 
+                                    onChange={e => setGlobalMonth(e.target.value)}
+                                    options={periodOptions}
+                                />
+                            </div>
+                            
+                            {/* RANGO SIMPLE */}
+                            {globalMonth === 'custom' && (
+                                <div className="flex items-center gap-2 animate-in slide-in-from-right-2 w-full md:w-auto">
+                                    <Input darkMode={darkMode} type="date" value={customDateRange.start} onChange={e => setCustomDateRange({...customDateRange, start: e.target.value})} />
+                                    <span className={`font-bold ${darkMode ? 'text-zinc-600' : 'text-zinc-400'}`}>-</span>
+                                    <Input darkMode={darkMode} type="date" value={customDateRange.end} onChange={e => setCustomDateRange({...customDateRange, end: e.target.value})} />
+                                </div>
+                            )}
+
+                            {/* MODO COMPARACIÓN (Vs) */}
+                            {globalMonth === 'compare' && (
+                                <div className="flex flex-col gap-2 animate-in slide-in-from-right-2 w-full md:w-auto">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] font-bold uppercase w-10 ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>Base</span>
+                                        <Input darkMode={darkMode} type="date" value={customDateRange.start} onChange={e => setCustomDateRange({...customDateRange, start: e.target.value})} />
+                                        <span className={`font-bold ${darkMode ? 'text-zinc-600' : 'text-zinc-400'}`}>-</span>
+                                        <Input darkMode={darkMode} type="date" value={customDateRange.end} onChange={e => setCustomDateRange({...customDateRange, end: e.target.value})} />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] font-bold uppercase w-10 ${darkMode ? 'text-rose-400' : 'text-rose-600'}`}>Vs</span>
+                                        <Input darkMode={darkMode} type="date" value={compareDateRange.start} onChange={e => setCompareDateRange({...compareDateRange, start: e.target.value})} />
+                                        <span className={`font-bold ${darkMode ? 'text-zinc-600' : 'text-zinc-400'}`}>-</span>
+                                        <Input darkMode={darkMode} type="date" value={compareDateRange.end} onChange={e => setCompareDateRange({...compareDateRange, end: e.target.value})} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* VISTA DIVIDIDA (MANO A MANO) */}
+                    {globalMonth === 'compare' ? (
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                            
+                            {/* COLUMNA 1: PERIODO BASE */}
+                            <div className="space-y-6 border-b xl:border-b-0 xl:border-r border-zinc-200 dark:border-zinc-800 pb-8 xl:pb-0 xl:pr-8">
+                                <h3 className="text-xl font-black text-indigo-500 flex items-center gap-2">
+                                    <Calendar size={20}/> Periodo Base
+                                </h3>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <MetricCard color="blue" darkMode={darkMode} title="Ingresos" value={formatMoney(analysisData.baseStats.totalRevenue)} subtitle="Bruto facturado" icon={DollarSign} />
+                                    <MetricCard color="emerald" darkMode={darkMode} title="Ganancia Bruta" value={formatMoney(analysisData.baseStats.grossProfit)} subtitle="Ingresos - Costo" icon={TrendingUp} trend={<span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white/50 text-zinc-600 dark:bg-black/50 dark:text-zinc-400">{formatPercent(analysisData.baseStats.grossMargin)}</span>} />
+                                    <MetricCard color="rose" darkMode={darkMode} title="Gastos Fijos" value={formatMoney(analysisData.baseStats.totalGlobalExpenses)} subtitle="Logística" icon={Wallet} />
+                                    <MetricCard color="violet" darkMode={darkMode} title="Beneficio Neto" value={formatMoney(analysisData.baseStats.netProfit)} subtitle="Capital libre" icon={Award} trend={<span className={`text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/50 text-violet-700 dark:bg-black/50 dark:text-violet-400`}>{formatPercent(analysisData.baseStats.netMargin)}</span>} />
+                                    <MetricCard color="amber" darkMode={darkMode} title="Inversión" value={formatMoney(analysisData.baseStats.totalInvestment)} subtitle="Capital apostado" icon={Box} />
+                                    <MetricCard color="indigo" darkMode={darkMode} title="Valor Inventario" value={formatMoney(analysisData.baseStats.currentStockValue)} subtitle="Activo retenido" icon={Package} />
+                                    <MetricCard color="emerald" darkMode={darkMode} title="Flujo Efectivo" value={formatMoney(analysisData.baseStats.cashBalance)} subtitle="Caja real" icon={Activity} />
+                                    <MetricCard color="amber" darkMode={darkMode} title="Promedio Ventas" value={analysisData.baseStats.dailyAvgItems.toFixed(1)} subtitle="Unidades por día" icon={Flame} />
+                                </div>
+
+                                <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                    <div className={`p-4 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                        <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><TrendingUp size={16}/></div>
+                                        <h3 className="font-bold tracking-tight text-sm">Ingresos (Base)</h3>
+                                    </div>
+                                    <div className="p-4">
+                                        <SalesAreaChart sales={analysisData.baseStats.filteredSales} mode="custom" customRange={customDateRange} darkMode={darkMode} isCompareMode={false} />
+                                    </div>
+                                </Card>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                        <div className={`p-4 border-b flex items-center gap-2 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                            <div className="bg-indigo-500/10 text-indigo-500 p-1.5 rounded-md"><Users size={14}/></div>
+                                            <h3 className="font-bold tracking-tight text-xs">Canales (Base)</h3>
+                                        </div>
+                                        <ModernDistribution data={analysisData.baseStats.pieSourceData} colors={['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b']} darkMode={darkMode} />
+                                    </Card>
+                                    <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                        <div className={`p-4 border-b flex items-center gap-2 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                            <div className="bg-indigo-500/10 text-indigo-500 p-1.5 rounded-md"><BarChart3 size={14}/></div>
+                                            <h3 className="font-bold tracking-tight text-xs">B2B/B2C (Base)</h3>
+                                        </div>
+                                        <ModernDistribution data={analysisData.baseStats.pieTypeData} colors={['#10b981', '#6366f1']} darkMode={darkMode} />
+                                    </Card>
+                                </div>
+                            </div>
+
+                            {/* COLUMNA 2: PERIODO A COMPARAR (VS) */}
+                            <div className="space-y-6">
+                                <h3 className="text-xl font-black text-rose-500 flex items-center gap-2">
+                                    <ArrowUpDown size={20}/> Periodo a Comparar (Vs)
+                                </h3>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <MetricCard color="blue" darkMode={darkMode} title="Ingresos" value={formatMoney(analysisData.compareStats.totalRevenue)} subtitle="Bruto facturado" icon={DollarSign} />
+                                    <MetricCard color="emerald" darkMode={darkMode} title="Ganancia Bruta" value={formatMoney(analysisData.compareStats.grossProfit)} subtitle="Ingresos - Costo" icon={TrendingUp} trend={<span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white/50 text-zinc-600 dark:bg-black/50 dark:text-zinc-400">{formatPercent(analysisData.compareStats.grossMargin)}</span>} />
+                                    <MetricCard color="rose" darkMode={darkMode} title="Gastos Fijos" value={formatMoney(analysisData.compareStats.totalGlobalExpenses)} subtitle="Logística" icon={Wallet} />
+                                    <MetricCard color="violet" darkMode={darkMode} title="Beneficio Neto" value={formatMoney(analysisData.compareStats.netProfit)} subtitle="Capital libre" icon={Award} trend={<span className={`text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/50 text-violet-700 dark:bg-black/50 dark:text-violet-400`}>{formatPercent(analysisData.compareStats.netMargin)}</span>} />
+                                    <MetricCard color="amber" darkMode={darkMode} title="Inversión" value={formatMoney(analysisData.compareStats.totalInvestment)} subtitle="Capital apostado" icon={Box} />
+                                    <MetricCard color="indigo" darkMode={darkMode} title="Valor Inventario" value={formatMoney(analysisData.compareStats.currentStockValue)} subtitle="Activo retenido" icon={Package} />
+                                    <MetricCard color="emerald" darkMode={darkMode} title="Flujo Efectivo" value={formatMoney(analysisData.compareStats.cashBalance)} subtitle="Caja real" icon={Activity} />
+                                    <MetricCard color="amber" darkMode={darkMode} title="Promedio Ventas" value={analysisData.compareStats.dailyAvgItems.toFixed(1)} subtitle="Unidades por día" icon={Flame} />
+                                </div>
+
+                                <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                    <div className={`p-4 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                        <div className="bg-rose-500/10 text-rose-500 p-2 rounded-lg"><TrendingUp size={16}/></div>
+                                        <h3 className="font-bold tracking-tight text-sm">Ingresos (Vs)</h3>
+                                    </div>
+                                    <div className="p-4">
+                                        <SalesAreaChart sales={analysisData.compareStats.filteredSales} mode="custom" customRange={compareDateRange} darkMode={darkMode} isCompareMode={true} />
+                                    </div>
+                                </Card>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                        <div className={`p-4 border-b flex items-center gap-2 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                            <div className="bg-rose-500/10 text-rose-500 p-1.5 rounded-md"><Users size={14}/></div>
+                                            <h3 className="font-bold tracking-tight text-xs">Canales (Vs)</h3>
+                                        </div>
+                                        <ModernDistribution data={analysisData.compareStats.pieSourceData} colors={['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b']} darkMode={darkMode} />
+                                    </Card>
+                                    <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                        <div className={`p-4 border-b flex items-center gap-2 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                            <div className="bg-rose-500/10 text-rose-500 p-1.5 rounded-md"><BarChart3 size={14}/></div>
+                                            <h3 className="font-bold tracking-tight text-xs">B2B/B2C (Vs)</h3>
+                                        </div>
+                                        <ModernDistribution data={analysisData.compareStats.pieTypeData} colors={['#10b981', '#6366f1']} darkMode={darkMode} />
+                                    </Card>
+                                </div>
+                            </div>
+
+                        </div>
+                    ) : (
+                        /* VISTA NORMAL (UN SOLO PERIODO) */
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <MetricCard 
+                                    color="blue"
+                                    darkMode={darkMode} title={`Ingresos ${globalMonth === 'all' ? 'Totales' : ''}`} value={formatMoney(analysisData.baseStats.totalRevenue)} subtitle="Bruto facturado" icon={DollarSign}
+                                    trend={analysisData.prevBaseStats && analysisData.prevBaseStats.totalRevenue > 0 ? (
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${analysisData.baseStats.totalRevenue >= analysisData.prevBaseStats.totalRevenue ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                                            {analysisData.baseStats.totalRevenue >= analysisData.prevBaseStats.totalRevenue ? '↑' : '↓'} {Math.abs(((analysisData.baseStats.totalRevenue - analysisData.prevBaseStats.totalRevenue)/analysisData.prevBaseStats.totalRevenue)*100).toFixed(0)}%
+                                        </span>
+                                    ) : null}
+                                />
+                                <MetricCard color="emerald" darkMode={darkMode} title="Ganancia Bruta" value={formatMoney(analysisData.baseStats.grossProfit)} subtitle="Ingresos - Costo Mercadería" icon={TrendingUp} trend={<span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white/50 text-zinc-600 dark:bg-black/50 dark:text-zinc-400">{formatPercent(analysisData.baseStats.grossMargin)}</span>} />
+                                <MetricCard color="rose" darkMode={darkMode} title="Gastos Fijos" value={formatMoney(analysisData.baseStats.totalGlobalExpenses)} subtitle="Logística y operativos" icon={Wallet} />
+                                <MetricCard 
+                                    color="violet"
+                                    darkMode={darkMode} title="Beneficio Neto" value={formatMoney(analysisData.baseStats.netProfit)} subtitle="Capital libre" icon={Award}
+                                    trend={
+                                        <div className="flex gap-1 items-center">
+                                            {analysisData.prevBaseStats && analysisData.prevBaseStats.netProfit > 0 && (
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${analysisData.baseStats.netProfit >= analysisData.prevBaseStats.netProfit ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                                                    {analysisData.baseStats.netProfit >= analysisData.prevBaseStats.netProfit ? '↑' : '↓'} {Math.abs(((analysisData.baseStats.netProfit - analysisData.prevBaseStats.netProfit)/analysisData.prevBaseStats.netProfit)*100).toFixed(0)}%
+                                                </span>
+                                            )}
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/50 text-violet-700 dark:bg-black/50 dark:text-violet-400`}>{formatPercent(analysisData.baseStats.netMargin)}</span>
+                                        </div>
+                                    }
+                                />
+                                <MetricCard color="amber" darkMode={darkMode} title="Inversión" value={formatMoney(analysisData.baseStats.totalInvestment)} subtitle="Capital apostado" icon={Box} />
+                                <MetricCard color="indigo" darkMode={darkMode} title="Valor Inventario" value={formatMoney(analysisData.baseStats.currentStockValue)} subtitle="Activo retenido actual" icon={Package} />
+                                <MetricCard color="emerald" darkMode={darkMode} title="Flujo Efectivo" value={formatMoney(analysisData.baseStats.cashBalance)} subtitle="Diferencia real en caja" icon={Activity} />
+                                <MetricCard 
+                                    color="amber"
+                                    darkMode={darkMode} title="Promedio Ventas" value={analysisData.baseStats.dailyAvgItems.toFixed(1)} subtitle="Unidades por día activo" icon={Flame}
+                                    trend={analysisData.baseStats.currentStreak > 0 ? <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white/50 text-orange-600 dark:bg-black/50 dark:text-orange-400 flex items-center gap-1"><Flame size={12}/> {analysisData.baseStats.currentStreak} días</span> : null}
+                                />
+                            </div>
+
+                            <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                <div className={`p-5 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                    <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><TrendingUp size={18}/></div>
+                                    <h3 className="font-bold tracking-tight text-sm">Evolución de Ingresos</h3>
+                                </div>
+                                <div className="p-5">
+                                    <SalesAreaChart sales={analysisData.baseStats.filteredSales} mode={globalMonth === 'custom' ? 'custom' : globalMonth} customRange={customDateRange} darkMode={darkMode} />
+                                </div>
+                            </Card>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                <div className={`p-5 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                    <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><Users size={18}/></div>
+                                    <h3 className="font-bold tracking-tight text-sm">Tráfico por Canales</h3>
+                                </div>
+                                <ModernDistribution data={analysisData.baseStats.pieSourceData} colors={['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b']} darkMode={darkMode} />
+                                </Card>
+
+                                <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                                <div className={`p-5 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                    <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><BarChart3 size={18}/></div>
+                                    <h3 className="font-bold tracking-tight text-sm">Segmentación B2B / B2C</h3>
+                                </div>
+                                <ModernDistribution data={analysisData.baseStats.pieTypeData} colors={['#10b981', '#6366f1']} darkMode={darkMode} />
+                                </Card>
+                            </div>
+                        </>
+                    )}
+
+                    {/* NUEVO: SECCIÓN DE RENDIMIENTO DE EQUIPO Y CLIENTES NUEVOS */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+                        
+                        {/* TARJETA RENDIMIENTO DE EQUIPO */}
+                        <Card darkMode={darkMode} className="p-5 flex flex-col h-full">
+                            <div className={`border-b pb-4 mb-4 flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><UserCircle size={18}/></div>
+                                <div>
+                                    <h3 className="font-bold tracking-tight text-sm">Rendimiento del Equipo</h3>
+                                    <p className={`text-xs ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Comparativa de ventas en el periodo actual</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                                {teamStats.map((member, index) => (
+                                    <div key={member.name} className={`p-4 rounded-xl border flex flex-col justify-between ${darkMode ? 'bg-[#0a0c10] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                                        <div>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${index === 0 ? 'bg-amber-100 text-amber-600' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}>
+                                                        {index + 1}
+                                                    </div>
+                                                    <span className="font-bold text-sm">{member.name}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-2xl font-black mb-1">{formatMoney(member.revenue)}</div>
+                                            <div className={`text-xs font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Facturado</div>
+                                        </div>
+                                        <div className="mt-4 flex items-center gap-2">
+                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>{member.count} pedidos</span>
+                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>{member.items} un.</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+
+                        {/* TARJETA CLIENTES NUEVOS */}
+                        <Card darkMode={darkMode} className="p-5 flex flex-col h-full">
+                            <div className={`border-b pb-4 mb-4 flex items-center justify-between gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-emerald-500/10 text-emerald-500 p-2 rounded-lg"><Star size={18}/></div>
+                                    <div>
+                                        <h3 className="font-bold tracking-tight text-sm">Nuevos Clientes Captados</h3>
+                                        <p className={`text-xs ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Historial de primeras compras</p>
+                                    </div>
+                                </div>
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
+                                    {newClientsList.length} total
+                                </span>
+                            </div>
+                            
+                            <div className="max-h-[300px] overflow-y-auto custom-scrollbar flex-1 pr-2">
+                                {newClientsList.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full opacity-50 py-8">
+                                        <Star size={32} className="mb-2" />
+                                        <span className="text-sm font-medium">No hay clientes nuevos registrados en este periodo.</span>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {newClientsList.map(nc => (
+                                            <div key={nc.id} className={`p-4 rounded-xl border flex justify-between items-center transition-colors ${darkMode ? 'bg-[#0a0c10] border-zinc-800 hover:border-zinc-700' : 'bg-zinc-50 border-zinc-200 hover:border-zinc-300'}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${darkMode ? 'bg-zinc-800 text-zinc-300' : 'bg-white border text-zinc-600 shadow-sm'}`}>
+                                                        {nc.seller ? nc.seller.charAt(0) : '0'}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-sm mb-0.5">{nc.productName} <span className="font-normal opacity-70">({nc.variant})</span></div>
+                                                        <div className={`text-[11px] font-medium flex items-center gap-2 ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                                                            <span>{safeDateStr(nc.date, {day:'numeric', month:'short'})}</span>
+                                                            <span>•</span>
+                                                            <span>Por: {nc.seller || '028 Import'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="font-black text-emerald-500">{formatMoney(nc.totalSaleRaw)}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+
+                </div>
+            )}
+
+            {/* --- PESTAÑA VENTAS (SISTEMA MULTIPRODUCTO + TABLA AGRUPADA) --- */}
+            {activeTab === 'sales' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 animate-in fade-in duration-300">
+                
+                {/* Columna Izquierda: Formulario Multiproducto con SCROLL INTERNO */}
+                <div className="lg:col-span-4">
+                    <div className="sticky top-6 space-y-4 max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar pr-2 pb-4">
+                        <Card darkMode={darkMode} className="p-5">
+                            <h2 className="text-base font-bold mb-4 flex items-center gap-2"><ShoppingCart size={18} className="text-indigo-500"/> Nuevo Pedido</h2>
+                            
+                            <div className="space-y-4">
+                                <Input darkMode={darkMode} label="Fecha de Operación" type="date" value={saleGeneral.saleDate} onChange={e => setSaleGeneral({...saleGeneral, saleDate: e.target.value})} />
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <Select darkMode={darkMode} label="Canal" value={saleGeneral.source} onChange={e => setSaleGeneral({...saleGeneral, source: e.target.value})} options={[{value:'Instagram', label:'Instagram'}, {value:'Whatsapp', label:'Whatsapp'}, {value:'Personal', label:'Personal'}, {value:'Web', label:'Web'}]} />
+                                    <Select darkMode={darkMode} label="Tipo" value={saleGeneral.isReseller} onChange={e => setSaleGeneral({...saleGeneral, isReseller: e.target.value})} options={[{value:'No', label:'Consumidor'}, {value:'Si', label:'Revendedor'}]} />
+                                    <Select darkMode={darkMode} label="Historial" value={saleGeneral.isNewClient} onChange={e => setSaleGeneral({...saleGeneral, isNewClient: e.target.value})} options={[{value:'No', label:'Frecuente'}, {value:'Si', label:'Nuevo'}]} />
+                                </div>
+                                
+                                <hr className={`border-dashed ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`} />
+
+                                <div className="space-y-4">
+                                    {saleItems.map((item, index) => (
+                                        <div key={item.id} className={`p-4 rounded-xl border relative ${darkMode ? 'bg-[#0f1115] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Producto {index + 1}</span>
+                                                {saleItems.length > 1 && (
+                                                    <button onClick={() => removeSaleItem(item.id)} className="text-red-500 hover:bg-red-500/10 p-1 rounded-md transition-colors">
+                                                        <XCircle size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <CustomSelect 
+                                                    darkMode={darkMode} 
+                                                    label="Carpeta de Origen" 
+                                                    value={item.batchId} 
+                                                    onChange={e => {
+                                                        updateSaleItem(item.id, 'batchId', e.target.value);
+                                                        updateSaleItem(item.id, 'itemId', ''); 
+                                                    }} 
+                                                    options={batches.map(b => ({
+                                                        value: b.id, 
+                                                        label: b.name || 'Sin nombre',
+                                                        renderDropdown: (
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <span className="font-medium text-xs truncate">{b.name || 'Sin nombre'}</span>
+                                                                {b.finalizedAt && <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-zinc-500/20 text-zinc-500 ml-2">Archivado</span>}
+                                                            </div>
+                                                        )
+                                                    }))} 
+                                                />
+                                                
+                                                {item.batchId && (
+                                                    <div className="animate-in slide-in-from-top-2">
+                                                        <CustomSelect 
+                                                            darkMode={darkMode} 
+                                                            label="Artículo Vendido" 
+                                                            value={item.itemId} 
+                                                            onChange={e => updateSaleItem(item.id, 'itemId', e.target.value)} 
+                                                            options={(batches.find(b => b.id === item.batchId)?.items || []).map(bItem => ({
+                                                                value: bItem.id, 
+                                                                label: `${bItem.product || 'Desconocido'} - ${bItem.variant || ''} (${bItem.currentStock || 0})`, 
+                                                                disabled: (bItem.currentStock || 0) <= 0,
+                                                                renderDropdown: (
+                                                                    <div className="flex flex-col w-full gap-0.5">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className={`font-semibold text-xs truncate ${item.itemId === bItem.id ? 'text-indigo-400' : ''}`}>{bItem.product || 'Desconocido'}</span>
+                                                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase whitespace-nowrap ml-2 ${(bItem.currentStock || 0) > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                                                Disp: {bItem.currentStock || 0}
+                                                                            </span>
+                                                                        </div>
+                                                                        {bItem.variant && <span className="text-[10px] opacity-60 leading-tight">{bItem.variant}</span>}
+                                                                    </div>
+                                                                )
+                                                            }))} 
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <Input darkMode={darkMode} label="Cantidad" type="number" value={item.quantity} onChange={e => updateSaleItem(item.id, 'quantity', e.target.value)} />
+                                                    <Input darkMode={darkMode} label="Precio Un." type="number" symbol="$" value={item.unitPrice} onChange={e => updateSaleItem(item.id, 'unitPrice', e.target.value)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    <Button darkMode={darkMode} onClick={addSaleItem} variant="outline" className="w-full text-xs h-9 border-dashed"><Plus size={14}/> Sumar otro producto</Button>
+                                </div>
+
+                                <hr className={`border-dashed ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`} />
+
+                                <div className={`p-3 rounded-lg border grid grid-cols-2 gap-3 ${darkMode ? 'bg-[#0a0c10] border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                                    <Input darkMode={darkMode} label="Costo Envío" type="number" symbol="$" value={saleGeneral.shippingCost} onChange={e => setSaleGeneral({...saleGeneral, shippingCost: e.target.value})} />
+                                    <Input darkMode={darkMode} label="Cobro Envío" type="number" symbol="$" value={saleGeneral.shippingPrice} onChange={e => setSaleGeneral({...saleGeneral, shippingPrice: e.target.value})} />
+                                </div>
+
+                                <Button darkMode={darkMode} onClick={handleAddSale} className="w-full mt-4 h-12 text-base shadow-lg shadow-indigo-600/30">Procesar Venta</Button>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* Columna Derecha: Historial Agrupado */}
+                <div className="lg:col-span-8">
+                  <Card darkMode={darkMode} className="h-full flex flex-col p-0 overflow-hidden border-zinc-200 dark:border-zinc-800">
+                    <div className={`p-4 border-b flex flex-col sm:flex-row justify-between gap-4 sm:items-center ${darkMode ? 'bg-[#131824] border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                        <h3 className="font-bold text-base flex-shrink-0">Libro de Ventas</h3>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <div className="flex-1 sm:w-64">
+                                <Input 
+                                  darkMode={darkMode} 
+                                  type="search" 
+                                  placeholder="Buscar producto, vendedor o fecha..." 
+                                  value={salesSearch}
+                                  onChange={(e) => setSalesSearch(e.target.value)}
+                                />
+                            </div>
+                            <Button darkMode={darkMode} onClick={handleExportSales} variant="outline" className="h-10 px-3 flex-shrink-0" title="Exportar CSV"><Download size={16}/></Button>
+                        </div>
+                    </div>
+                    
+                    <div className="overflow-x-auto flex-1 h-[700px] custom-scrollbar">
+                      <table className="w-full text-left text-sm border-collapse">
+                          <thead className={`sticky top-0 z-10 text-xs font-semibold ${darkMode ? 'bg-[#0f1115] text-zinc-400 border-b border-zinc-800 shadow-sm' : 'bg-zinc-50 text-zinc-500 border-b border-zinc-200 shadow-sm'}`}>
+                              <tr>
+                                <th className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => toggleSort('createdAt')}>
+                                  <div className="flex items-center gap-1">Registro <span className="opacity-50">{salesSort.key === 'createdAt' ? (salesSort.direction === 'asc' ? '↑' : '↓') : '↕'}</span></div>
+                                </th>
+                                <th className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => toggleSort('productName')}>
+                                  <div className="flex items-center gap-1">Operación <span className="opacity-50">{salesSort.key === 'productName' ? (salesSort.direction === 'asc' ? '↑' : '↓') : '↕'}</span></div>
+                                </th>
+                                <th className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-emerald-500" onClick={() => toggleSort('profit')}>
+                                  <div className="flex items-center gap-1">Neto <span className="opacity-50">{salesSort.key === 'profit' ? (salesSort.direction === 'asc' ? '↑' : '↓') : '↕'}</span></div>
+                                </th>
+                                <th className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => toggleSort('totalSaleRaw')}>
+                                  <div className="flex items-center gap-1">Total Fac. <span className="opacity-50">{salesSort.key === 'totalSaleRaw' ? (salesSort.direction === 'asc' ? '↑' : '↓') : '↕'}</span></div>
+                                </th>
+                                <th className="px-4 py-3"></th>
+                              </tr>
+                          </thead>
+                          <tbody className={`divide-y ${darkMode ? 'divide-zinc-800/80' : 'divide-zinc-100'}`}>
+                            {groupedSales.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-sm font-medium opacity-50 italic">No se encontraron ventas con esos filtros.</td></tr>}
+                            {groupedSales.map(group => (
+                                <tr key={group.ticketId} className={`transition-colors group ${darkMode ? 'hover:bg-[#131824]' : 'hover:bg-zinc-50'}`}>
+                                  <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap align-top pt-4 ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                                      {safeDateStr(group.date, {month:'short', day:'numeric'})}
+                                      {/* ETIQUETAS VISUALES */}
+                                      <div className="flex flex-col gap-1 mt-1.5 items-start">
+                                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-200 text-zinc-700'}`}>👤 {group.seller}</span>
+                                          {group.isNewClient && <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100 text-amber-600'}`}>Nuevo</span>}
+                                          {group.isReseller && <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>Revendedor</span>}
+                                      </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                      <div className="flex flex-col gap-2 mt-1">
+                                          {group.items.map((item, idx) => (
+                                              <div key={idx} className="flex flex-col">
+                                                  <div className="font-semibold text-sm">{item.quantity || 0}x {item.productName || 'Sin nombre'} <span className="font-normal opacity-70 ml-1">{item.variant || ''}</span></div>
+                                                  <div className={`text-[10px] font-medium mt-0.5 ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>Lote: {item.batchName || 'S/N'}</div>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </td>
+                                  <td className="px-4 py-3 font-medium text-emerald-500 text-sm align-top pt-4">{formatMoney(group.totalProfit)}</td>
+                                  <td className="px-4 py-3 font-bold font-mono tracking-tight align-top pt-4">{formatMoney(group.totalSaleRaw)}</td>
+                                  <td className="px-4 py-3 text-right align-top pt-3">
+                                      <button onClick={() => handleDeleteTicket(group)} className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${darkMode ? 'text-zinc-500 hover:bg-red-500/10 hover:text-red-400' : 'text-zinc-400 hover:bg-red-50 hover:text-red-600'}`}><Trash2 size={16} /></button>
+                                  </td>
+                                </tr>
+                            ))}
+                          </tbody>
+                      </table>
+                    </div>
+                  </Card>
                 </div>
               </div>
-              <div className="space-y-3">
-                <button onClick={executeOrder} disabled={isSending} className={`w-full ${isSending ? 'bg-gray-300 text-gray-500' : 'bg-[#25D366] text-white hover:scale-[1.02] shadow-lg shadow-[#25D366]/30'} py-4 rounded-xl font-bebas text-xl uppercase tracking-wider transition-all flex items-center justify-center gap-3`}>
-                  {isSending ? <><i className="fas fa-circle-notch fa-spin text-lg"></i> Procesando...</> : <><i className="fab fa-whatsapp text-2xl mb-0.5"></i> Enviar Comprobante</>}
-                </button>
-                <p className="text-[9px] text-gray-400 font-medium text-center font-poppins uppercase tracking-widest leading-relaxed">
-                  Realizá la transferencia y envianos la captura por WhatsApp tocando el botón verde.
-                </p>
+            )}
+
+            {/* --- PESTAÑA LOTES (CON EDICIÓN DE LOTE) --- */}
+            {activeTab === 'batches' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                  <div className={`p-5 border-b flex flex-col md:flex-row justify-between md:items-center gap-4 ${darkMode ? 'bg-[#131824] border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                      <div>
+                          <h2 className="text-xl font-bold mb-1">Inventario de Lotes</h2>
+                          <p className={`text-sm ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Administra tus importaciones y catálogos de productos.</p>
+                      </div>
+                      <div className="flex gap-3 items-end w-full md:w-auto">
+                        <div className="flex-1 md:w-64"><Input darkMode={darkMode} placeholder="Nombre del nuevo lote..." value={newBatchName} onChange={e => setNewBatchName(e.target.value)} /></div>
+                        <Button darkMode={darkMode} onClick={handleCreateBatch} className="shrink-0"><Plus size={16}/> Crear Lote</Button>
+                      </div>
+                  </div>
+                  <div className={`px-5 py-3 flex justify-end bg-zinc-50 dark:bg-[#0a0c10]`}>
+                      <Button darkMode={darkMode} onClick={handleExportBatches} variant="outline" className="h-9"><Download size={14}/> Bajar CSV Completo</Button>
+                  </div>
+                </Card>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {batches.map((b) => (
+                    <Card key={b.id} darkMode={darkMode} className={`p-0 overflow-hidden transition-all duration-300 group ${expandedBatchId === b.id ? 'ring-2 ring-indigo-500/50 border-transparent' : ''}`}>
+                      <div className={`p-5 flex justify-between items-center cursor-pointer transition-colors ${darkMode ? 'hover:bg-[#1a1f2e]' : 'hover:bg-zinc-50'}`} onClick={() => setExpandedBatchId(expandedBatchId === b.id ? null : b.id)}>
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 flex items-center justify-center rounded-xl ${b.finalizedAt ? (darkMode ? 'bg-emerald-500/10 text-emerald-500' : 'bg-emerald-100 text-emerald-600') : (darkMode ? 'bg-indigo-500/10 text-indigo-500' : 'bg-indigo-100 text-indigo-600')}`}>
+                                <FolderOpen size={24} strokeWidth={2} />
+                            </div>
+                            
+                            {/* LÓGICA AGREGADA: EDICIÓN DE NOMBRE DE LOTE */}
+                            <div>
+                                {editingBatchId === b.id ? (
+                                    <div className="flex items-center gap-2 mb-1" onClick={e => e.stopPropagation()}>
+                                        <input
+                                            autoFocus
+                                            className={`px-2 py-1 text-sm border rounded outline-none focus:border-indigo-500 ${darkMode ? 'bg-[#0a0c10] border-zinc-700 text-white' : 'bg-white border-zinc-300 text-black'}`}
+                                            value={editingBatchName}
+                                            onChange={(e) => setEditingBatchName(e.target.value)}
+                                        />
+                                        <button onClick={() => handleSaveEditBatchName(b.id)} className={`p-1.5 rounded-lg ${darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}><Save size={14}/></button>
+                                        <button onClick={() => setEditingBatchId(null)} className={`p-1.5 rounded-lg ${darkMode ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-200 text-zinc-600'}`}><XCircle size={14}/></button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <h3 className={`font-bold text-base ${darkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>{b.name || 'Sin nombre'}</h3>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setEditingBatchId(b.id); setEditingBatchName(b.name || ''); }} 
+                                            className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md ${darkMode ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-zinc-200 text-zinc-500'}`}
+                                        >
+                                            <Settings size={14}/>
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center gap-3 mt-1">
+                                    <span className={`text-xs font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>{(b.items || []).length} Ítems</span>
+                                    <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                                    <span className={`text-xs font-bold ${b.finalizedAt ? (darkMode ? 'text-zinc-500' : 'text-zinc-500') : (darkMode ? 'text-emerald-400' : 'text-emerald-600')}`}>{b.finalizedAt ? 'Archivado' : 'En Venta'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className={`p-2 rounded-full transition-colors ${darkMode ? 'text-zinc-500 bg-[#0f1115]' : 'text-zinc-400 bg-zinc-100'}`}>
+                            {expandedBatchId === b.id ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                        </div>
+                      </div>
+                      
+                      {expandedBatchId === b.id && (
+                        <div className={`border-t animate-in slide-in-from-top-2 ${darkMode ? 'border-zinc-800 bg-[#0f1115]' : 'border-zinc-200 bg-zinc-50/50'}`}>
+                          
+                          <div className={`p-5 m-5 rounded-xl border border-dashed ${darkMode ? 'border-zinc-700 bg-[#131824]' : 'border-zinc-300 bg-white'}`}>
+                            <h4 className={`text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}><Plus size={14}/> Agregar Mercadería</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-12 gap-3 items-end">
+                              <div className="col-span-2 md:col-span-4"><Input darkMode={darkMode} list="products-list" label="Producto" placeholder="Ej: iPhone 15" value={newItem.product} onChange={e => setNewItem({...newItem, product: e.target.value})} /></div>
+                              <div className="col-span-2 md:col-span-3"><Input darkMode={darkMode} list="variants-list" label="Variante" placeholder="Ej: 128GB Black" value={newItem.variant} onChange={e => setNewItem({...newItem, variant: e.target.value})} /></div>
+                              <div className="col-span-1 md:col-span-2"><Input darkMode={darkMode} label="Costo ($)" type="number" value={newItem.costArs} onChange={e => setNewItem({...newItem, costArs: e.target.value})} /></div>
+                              <div className="col-span-1 md:col-span-1"><Input darkMode={darkMode} label="Cant." type="number" value={newItem.initialStock} onChange={e => setNewItem({...newItem, initialStock: e.target.value})} /></div>
+                              <div className="col-span-2 md:col-span-2"><Button darkMode={darkMode} onClick={() => handleAddItemToBatch(b.id)} className="w-full">Añadir</Button></div>
+                            </div>
+                          </div>
+
+                          <table className="w-full text-left text-sm border-t dark:border-zinc-800">
+                            <thead className={`text-xs font-semibold ${darkMode ? 'bg-[#131824] text-zinc-500' : 'bg-zinc-100 text-zinc-500'}`}>
+                                <tr><th className="px-5 py-3">Descripción del Artículo</th><th className="px-5 py-3">Costo Un.</th><th className="px-5 py-3">Disponibilidad</th><th className="px-5 py-3 text-right"></th></tr>
+                            </thead>
+                            <tbody className={`divide-y ${darkMode ? 'divide-zinc-800/50' : 'divide-zinc-200'}`}>
+                              {(b.items || []).length === 0 && <tr><td colSpan="4" className="p-8 text-center text-sm font-medium opacity-50 italic">La carpeta está vacía.</td></tr>}
+                              {(b.items || []).map((item, idx) => {
+                                const isEditing = editingItem?.id === item.id;
+                                return (
+                                <tr key={item.id} className={`transition-colors group/item ${darkMode ? 'hover:bg-[#131824]' : 'hover:bg-white'}`}>
+                                  {isEditing ? (
+                                      <>
+                                          <td className="px-5 py-3">
+                                              <input className={`w-full p-1.5 mb-1 text-sm border rounded outline-none focus:border-indigo-500 ${darkMode ? 'bg-[#0a0c10] border-zinc-700 text-white' : 'bg-white border-zinc-300 text-black'}`} value={editingItem.product} onChange={e => setEditingItem({...editingItem, product: e.target.value})} placeholder="Producto"/>
+                                              <input className={`w-full p-1.5 text-xs border rounded outline-none focus:border-indigo-500 ${darkMode ? 'bg-[#0a0c10] border-zinc-700 text-white' : 'bg-white border-zinc-300 text-black'}`} value={editingItem.variant} onChange={e => setEditingItem({...editingItem, variant: e.target.value})} placeholder="Variante"/>
+                                          </td>
+                                          <td className="px-5 py-3">
+                                              <input type="number" className={`w-20 p-1.5 text-sm border rounded outline-none focus:border-indigo-500 ${darkMode ? 'bg-[#0a0c10] border-zinc-700 text-white' : 'bg-white border-zinc-300 text-black'}`} value={editingItem.costArs} onChange={e => setEditingItem({...editingItem, costArs: e.target.value})} />
+                                          </td>
+                                          <td className="px-5 py-3">
+                                              <input type="number" className={`w-16 p-1.5 text-sm border rounded outline-none focus:border-indigo-500 ${darkMode ? 'bg-[#0a0c10] border-zinc-700 text-white' : 'bg-white border-zinc-300 text-black'}`} value={editingItem.initialStock} onChange={e => setEditingItem({...editingItem, initialStock: e.target.value})} title="Editar stock total comprado"/>
+                                          </td>
+                                          <td className="px-5 py-3 text-right">
+                                              <div className="flex justify-end gap-1">
+                                                  <button onClick={() => handleSaveEditItem(b.id)} className={`p-2 rounded-lg ${darkMode ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-emerald-600 hover:bg-emerald-50'}`} title="Guardar Cambios"><Save size={16} /></button>
+                                                  <button onClick={() => setEditingItem(null)} className={`p-2 rounded-lg ${darkMode ? 'text-zinc-500 hover:bg-zinc-800' : 'text-zinc-400 hover:bg-zinc-100'}`} title="Cancelar"><XCircle size={16} /></button>
+                                              </div>
+                                          </td>
+                                      </>
+                                  ) : (
+                                      <>
+                                          <td className="px-5 py-3">
+                                              <div className="font-semibold text-sm">{item.product || 'Sin nombre'}</div>
+                                              <div className={`text-xs font-medium mt-0.5 ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>{item.variant || ''}</div>
+                                          </td>
+                                          <td className="px-5 py-3 font-mono font-medium text-sm text-zinc-500">{formatMoney(item.costArs)}</td>
+                                          <td className="px-5 py-3">
+                                              <div className="flex items-center gap-2">
+                                                  <div className={`h-2 w-16 rounded-full overflow-hidden ${darkMode ? 'bg-zinc-800' : 'bg-zinc-200'}`}>
+                                                      <div className={`h-full rounded-full ${(item.currentStock || 0) === 0 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{width: `${((item.currentStock || 0)/(item.initialStock || 1))*100}%`}}></div>
+                                                  </div>
+                                                  <span className="font-bold text-xs">{item.currentStock || 0} <span className="opacity-50 font-normal">/ {item.initialStock || 0}</span></span>
+                                              </div>
+                                          </td>
+                                          <td className="px-5 py-3 text-right">
+                                              <div className="flex justify-end gap-1 opacity-0 group-hover/item:opacity-100 transition-all">
+                                                  <button onClick={() => setEditingItem(item)} className={`p-2 rounded-lg ${darkMode ? 'text-indigo-400 hover:bg-indigo-500/10' : 'text-indigo-600 hover:bg-indigo-50'}`} title="Editar Producto"><Settings size={16} /></button>
+                                                  <button onClick={() => handleDeleteItemFromBatch(b.id, item.id)} className={`p-2 rounded-lg ${darkMode ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'}`} title="Eliminar Producto"><Trash2 size={16} /></button>
+                                              </div>
+                                          </td>
+                                      </>
+                                  )}
+                                </tr>
+                              )})}
+                            </tbody>
+                          </table>
+                          
+                          <div className={`p-4 flex justify-end border-t ${darkMode ? 'border-zinc-800 bg-[#0a0c10]' : 'border-zinc-200 bg-zinc-100'}`}>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBatch(b.id); }} className={`text-sm font-semibold flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${darkMode ? 'text-red-500 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'}`}><Trash2 size={16}/> Eliminar Carpeta Definitivamente</button>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* --- MODAL DE CALCULADORA DE ENVÍO INDEPENDIENTE --- */}
-      {showShippingCalculatorModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowShippingCalculatorModal(false)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="bg-[#111111] p-6 text-center relative border-b border-white/10">
-              <button onClick={() => setShowShippingCalculatorModal(false)} className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-colors"><i className="fas fa-times"></i></button>
-              <div className="w-16 h-16 bg-[#fcdb00] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"><i className="fas fa-motorcycle text-3xl text-[#111111]"></i></div>
-              <h2 className="text-3xl font-bebas text-white uppercase tracking-wide">Cotizar Envío</h2>
-              <p className="text-[#fcdb00] text-[11px] font-bold uppercase tracking-widest font-poppins">Solo válido para Motomensajería</p>
-            </div>
-            <div className="p-6 md:p-8 flex flex-col gap-6">
-              <CalculadorEnvio 
-                  address={address} setAddress={setAddress}
-                  zone={zone} setZone={setZone}
-                  shippingType="moto"
-                  setShippingCost={setShippingCost}
-                  aptDetails={aptDetails}
-                  setAptDetails={setAptDetails}
-              />
-              <button onClick={() => setShowShippingCalculatorModal(false)} className="w-full bg-[#111111] text-white hover:bg-[#fcdb00] hover:text-[#111111] py-4 rounded-xl font-bebas text-xl uppercase tracking-wider transition-all shadow-lg active:scale-95">Listo</button>
-            </div>
-          </div>
-        </div>
-      )}
+            {/* --- PESTAÑA ANÁLISIS DE LOTE --- */}
+            {activeTab === 'analysis' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <Card darkMode={darkMode} className="p-5">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+                        <div>
+                            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2"><BarChart3 size={20} className="text-indigo-500"/> Auditoría de Lotes</h2>
+                            <p className={`text-sm font-medium mt-1 ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Selecciona una importación para ver su rendimiento exacto.</p>
+                        </div>
+                        <div className="w-full md:w-80">
+                            <Select
+                                darkMode={darkMode}
+                                onChange={(e) => setSelectedBatchStats(e.target.value)}
+                                value={selectedBatchStats || ''}
+                                options={[{value: '', label: '-- Selecciona un lote de la lista --'}, ...batches.map(b => ({value: b.id, label: `${b.name || 'Sin nombre'} ${b.finalizedAt ? '(Archivado)' : ''}`}))]}
+                            />
+                        </div>
+                    </div>
+                </Card>
 
-      {/* SCRIPT DEL CONFETI Y FONT AWESOME */}
-      <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+                {batchAnalysis ? (
+                    <div className="space-y-6 animate-in slide-in-from-bottom-4">
+                       <div className={`p-4 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${batchAnalysis.batch.finalizedAt ? (darkMode ? 'border-zinc-800 bg-[#0f1115]' : 'border-zinc-300 bg-zinc-100') : (darkMode ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-indigo-200 bg-indigo-50')}`}>
+                          <div>
+                            <h3 className="font-bold text-sm flex items-center gap-2">
+                                <Settings size={18} className={darkMode ? 'text-zinc-400' : 'text-zinc-500'}/> Estado Operativo: 
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${batchAnalysis.batch.finalizedAt ? 'bg-zinc-500/20 text-zinc-500' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
+                                    {batchAnalysis.batch.finalizedAt ? "Archivado" : "Activo"}
+                                </span>
+                            </h3>
+                            {batchAnalysis.batch.finalizedAt && <div className={`text-xs font-medium mt-2 ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Se marcó como agotado el {safeDateStr(batchAnalysis.batch.finalizedAt)}</div>}
+                          </div>
+
+                          {batchAnalysis.batch.finalizedAt ? (
+                              <Button darkMode={darkMode} onClick={() => handleUpdateBatchStatus(batchAnalysis.batch.id, false)} variant="outline">🔄 Reabrir Operación</Button>
+                              ) : (
+                              <div className="flex gap-3 items-end w-full sm:w-auto">
+                                  <Input darkMode={darkMode} type="date" label="Cierre Manual" value={manualFinalizeDate} onChange={e => setManualFinalizeDate(e.target.value)} />
+                                  <Button darkMode={darkMode} onClick={() => handleUpdateBatchStatus(batchAnalysis.batch.id, true)}>Archivar Lote</Button>
+                              </div>
+                          )}
+                       </div>
+
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                          <MetricCard color="amber" darkMode={darkMode} title="Inversión Base" value={formatMoney(batchAnalysis.totalInvestment)} subtitle="Costo original" icon={Box} />
+                          <MetricCard color="blue" darkMode={darkMode} title="Retorno Bruto" value={formatMoney(batchAnalysis.totalRevenue)} subtitle="Ventas totales" icon={DollarSign} />
+                          <MetricCard color="rose" darkMode={darkMode} title="Gastos Adicionales" value={formatMoney(batchAnalysis.totalBatchExpenses)} subtitle="Costos operativos" icon={Wallet} />
+                          <MetricCard color="emerald" darkMode={darkMode} title="Flujo Efectivo" value={formatMoney(batchAnalysis.cashBalance)} subtitle="Liquidez generada" icon={Activity} />
+                          <MetricCard color="indigo" darkMode={darkMode} title="Stock Remanente" value={formatMoney(batchAnalysis.currentStockValue)} subtitle="Activo sin liquidar" icon={Package} />
+                          
+                          <MetricCard 
+                              color="emerald" darkMode={darkMode} title="Beneficio Bruto" value={formatMoney(batchAnalysis.grossProfit)} subtitle="Previo a gastos" icon={TrendingUp}
+                              trend={<span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white/50 text-emerald-700 dark:bg-black/50 dark:text-emerald-400">{formatPercent(batchAnalysis.grossMargin)}</span>}
+                          />
+
+                            <MetricCard color="amber" darkMode={darkMode} title="Resultado Envíos" value={formatMoney(batchAnalysis.totalShippingProfit)} subtitle="Cobrado vs Pagado" icon={Truck} />
+                          
+                          <MetricCard 
+                              color="violet" darkMode={darkMode} title="Beneficio Neto" value={formatMoney(batchAnalysis.netProfit)} subtitle="Utilidad limpia" icon={Award}
+                              trend={<span className={`text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/50 text-violet-700 dark:bg-black/50 dark:text-violet-400`}>{formatPercent(batchAnalysis.netMargin)}</span>}
+                          />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                          <div className={`p-5 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                              <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><Users size={18}/></div>
+                              <h3 className="font-bold tracking-tight text-sm">Distribución de Canales</h3>
+                          </div>
+                          <ModernDistribution data={batchAnalysis.pieSourceData} colors={['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b']} darkMode={darkMode} />
+                        </Card>
+
+                        <Card darkMode={darkMode} className="p-0 overflow-hidden">
+                          <div className={`p-5 border-b flex items-center gap-3 ${darkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                              <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-lg"><BarChart3 size={18}/></div>
+                              <h3 className="font-bold tracking-tight text-sm">Perfil de Comprador</h3>
+                          </div>
+                          <ModernDistribution data={batchAnalysis.pieTypeData} colors={['#10b981', '#6366f1']} darkMode={darkMode} />
+                        </Card>
+                      </div>
+                    </div>
+                ) : (
+                    <div className={`py-24 text-center rounded-xl border border-dashed ${darkMode ? 'border-zinc-800 bg-[#0f1115]' : 'border-zinc-300 bg-zinc-50'}`}>
+                        <BarChart3 size={48} className={`mx-auto mb-4 ${darkMode ? 'text-zinc-800' : 'text-zinc-200'}`}/>
+                        <p className={`text-sm font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-500'}`}>Elige un lote en el menú superior para comenzar el análisis.</p>
+                    </div>
+                )}
+              </div>
+            )}
+
+            {/* --- PESTAÑA GASTOS --- */}
+            {activeTab === 'expenses' && (
+                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+                <Card darkMode={darkMode} className="border-t-4 border-t-rose-500 p-5 md:p-6">
+                    <h2 className="text-xl font-bold tracking-tight mb-5 flex items-center gap-2"><Wallet size={20} className="text-rose-500"/> Declarar Egreso</h2>
+                    <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                            <div className="sm:col-span-3"><Input darkMode={darkMode} type="date" label="Fecha" value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} /></div>
+                            <div className="sm:col-span-6"><Input darkMode={darkMode} label="Descripción del Gasto" placeholder="Ej: Publicidad Ads, Envío Extra..." value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} /></div>
+                            <div className="sm:col-span-3"><Input darkMode={darkMode} label="Importe" type="number" symbol="$" value={newExpense.amount} onChange={e => setNewExpense({...newExpense, amount: e.target.value})} /></div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-4 items-end">
+                              <div className="flex-1 w-full">
+                                 <Select 
+                                    darkMode={darkMode} 
+                                    label="Asignación Contable (Opcional)"
+                                    value={newExpense.batchId} 
+                                    onChange={e => setNewExpense({...newExpense, batchId: e.target.value})}
+                                    options={[
+                                        { value: '', label: '-- Gasto General del Negocio --' },
+                                        ...batches.map(b => ({ value: b.id, label: b.name || 'Sin nombre' }))
+                                    ]}
+                                 />
+                              </div>
+                              <Button darkMode={darkMode} onClick={handleAddExpense} variant="danger" className="w-full sm:w-48">Registrar Salida</Button>
+                        </div>
+                    </div>
+                </Card>
+
+                <Card darkMode={darkMode} className="p-0 overflow-hidden border-zinc-200 dark:border-zinc-800">
+                    <div className={`p-4 md:p-5 border-b ${darkMode ? 'bg-[#131824] border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                        <h3 className="font-bold text-base tracking-tight">Registro de Egresos</h3>
+                    </div>
+                    <div className={`divide-y ${darkMode ? 'divide-zinc-800' : 'divide-zinc-100'}`}>
+                        {expenses.length === 0 && <div className="p-12 text-center text-sm font-medium opacity-50">No hay movimientos de salida registrados.</div>}
+                        {expenses.map(e => (
+                        <div key={e.id} className={`flex justify-between items-center p-4 md:p-5 transition-colors group ${darkMode ? 'hover:bg-zinc-900/50 bg-[#0f1115]' : 'hover:bg-zinc-50 bg-white'}`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`p-2.5 rounded-lg ${darkMode ? 'bg-red-500/10 text-red-500' : 'bg-red-50 text-red-600'}`}><Wallet size={20}/></div>
+                                <div>
+                                    <div className="font-semibold text-sm">{e.description || 'Sin descripción'}</div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className={`text-[11px] font-medium ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>{safeDateStr(e.date, {month:'long', day:'numeric'})}</span>
+                                        {e.batchName && (
+                                            <>
+                                                <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${darkMode ? 'border-zinc-700 text-zinc-400' : 'border-zinc-200 text-zinc-500'}`}>{e.batchName}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <span className="font-bold tracking-tight text-red-500 text-lg">-{formatMoney(e.amount)}</span> 
+                                <button onClick={()=>handleDeleteExpense(e.id)} className={`p-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${darkMode ? 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10' : 'text-zinc-400 hover:text-red-600 hover:bg-red-50'}`}><Trash2 size={18}/></button>
+                            </div>
+                        </div>
+                        ))}
+                    </div>
+                </Card>
+                </div>
+            )}
+
+        </div>
+      </main>
     </div>
   );
 }
