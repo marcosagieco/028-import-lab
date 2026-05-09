@@ -1147,7 +1147,7 @@ export default function Home() {
           - right-4 md:right-6: Controla la distancia desde la derecha.
           - w-24 md:w-28: Controla el tamaño de la imagen. Cambialo a w-32 o w-40 si lo querés más grande.
       */}
-      <div className="fixed bottom-[100px] md:bottom-[110px] right-4 md:right-6 z-[90] flex items-center justify-center pointer-events-auto">
+      <div className="fixed bottom-[100px] md:bottom-[110px] right-[-54px] md:right-2 z-[90] flex items-center justify-center pointer-events-auto">
         <button 
           onClick={() => {
             if (hasSpunLocal) {
@@ -1157,7 +1157,7 @@ export default function Home() {
               setShowRouletteModal(true);
             }
           }}
-          className="w-24 md:w-28 h-auto hover:-translate-y-1 transition-transform duration-300 drop-shadow-[0_5px_15px_rgba(252,219,0,0.4)] focus:outline-none"
+          className="w-41 md:w-28 h-auto hover:-translate-y-1 transition-transform duration-300 drop-shadow-[0_5px_15px_rgba(252,219,0,0.4)] focus:outline-none"
         >
            <img src="https://i.ibb.co/kVTX09dS/Dise-o-sin-t-tulo-7.png" className="w-full h-auto object-contain" alt="Hot Sale" />
         </button>
