@@ -789,12 +789,11 @@ export default function Home() {
 
                 {ROULETTE_PRIZES.map((prize, idx) => {
                   const angle = 60 * idx; 
-                  const isEpic = prize.id === 'sorpresa';
                   return (
                     <div key={idx} className="absolute inset-0 z-20" style={{ transform: `rotate(${angle + 30}deg)` }}>
                       <div className="absolute top-0 left-0 right-0 h-1/2 flex items-start justify-center pt-5 md:pt-6">
                         <span 
-                          className={`font-bebas font-bold uppercase whitespace-nowrap text-center text-[#fcdb00] ${isEpic ? 'drop-shadow-[0_0_12px_rgba(252,219,0,0.8)]' : 'drop-shadow-md'} ${prize.text.length > 15 ? 'text-[13px] md:text-[15px] tracking-normal' : 'text-[15px] md:text-[17px] tracking-wider'}`}
+                          className={`font-bebas font-bold uppercase whitespace-nowrap text-center text-[#fcdb00] drop-shadow-md ${prize.text.length > 15 ? 'text-[13px] md:text-[15px] tracking-normal' : 'text-[15px] md:text-[17px] tracking-wider'}`}
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {prize.text}
