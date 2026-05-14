@@ -69,10 +69,18 @@ const INITIAL_COMMUNITY_VIDEOS = [
   },
 ];
 
-const DEFAULT_HOME_LAYOUT = [
-  { id: 'vidriera', label: 'Vidriera', order: 1, active: true },
-  { id: 'community', label: '028 Community', order: 2, active: true },
-];
+const buildDefaultHomeLayout = (sections = []) => {
+  const orderedSections = [...sections].sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+  if (!orderedSections.length) {
+    return [{ id: 'community', label: '028 Community', order: 1, active: true, type: 'community' }];
+  }
+  const [firstSection, ...restSections] = orderedSections;
+  return [
+    { id: firstSection.id, label: firstSection.title || 'Vidriera', order: 1, active: true, type: 'section' },
+    { id: 'community', label: '028 Community', order: 2, active: true, type: 'community' },
+    ...restSections.map((section, index) => ({ id: section.id, label: section.title || 'Vidriera', order: index + 3, active: true, type: 'section' })),
+  ];
+};
 
 const AVAILABLE_ICONS = [
   { id: 'fa-star', prefix: 'fas', color: 'text-[#fcdb00]' },     
@@ -304,84 +312,15 @@ const PAGE_CONTENT = {
   }
 };
 
-// COMPONENTE CONTADOR EXTRAÍDO PARA NO TRABAR LA PÁGINA
-const CountdownBanner = () => {
-  const calculateTimeToNextWednesday = () => {
-    if (typeof window === 'undefined') return null;
-    const now = new Date();
-    const target = new Date(now);
-    let daysUntilWednesday = 3 - now.getDay();
-    if (daysUntilWednesday < 0 || (daysUntilWednesday === 0 && now.getHours() >= 23)) {
-      daysUntilWednesday += 7;
-    }
-    target.setDate(now.getDate() + daysUntilWednesday);
-    target.setHours(23, 59, 59, 999);
-    const difference = target - now;
-    if (difference > 0) {
-      return {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60)
-      };
-    }
-    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-  };
-
-  const [timeLeft, setTimeLeft] = useState(null);
-
-  useEffect(() => {
-    setTimeLeft(calculateTimeToNextWednesday());
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeToNextWednesday());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="bg-[#0E0E0E] text-white py-3 md:py-4 overflow-hidden m-0 relative z-30 flex flex-col items-center justify-center border-b border-white/[0.06] shadow-md">
-      <div className="w-full overflow-hidden mb-1.5 opacity-90">
-        <div className="animate-marquee whitespace-nowrap flex items-center">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-2 text-[#fcdb00] font-poppins font-bold text-[9px] md:text-[10px] uppercase tracking-[0.15em]">
-              <span> HOT 028 </span>
-              <span className="text-white/30 text-[8px]">•</span>
-              <span>DESCUENTOS EXCLUSIVOS POR TIEMPO LIMITADO</span>
-              <span className="text-white/30 text-[8px]">•</span>
-              <span>ENVÍOS EN 30 MIN</span>
-              <span className="text-white/30 text-[8px]">•</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex gap-6 md:gap-10 font-bebas tracking-wide items-baseline mt-0.5">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl md:text-4xl font-black drop-shadow-lg leading-none text-[#fcdb00]">{timeLeft?.days || 0}</span>
-          <span className="text-[10px] text-white opacity-50 uppercase tracking-[0.2em] font-poppins font-medium">DÍAS</span>
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl md:text-4xl font-black drop-shadow-lg leading-none text-[#fcdb00]">{String(timeLeft?.hours || 0).padStart(2, '0')}</span>
-          <span className="text-[10px] text-white opacity-50 uppercase tracking-[0.2em] font-poppins font-medium">HS</span>
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl md:text-4xl font-black drop-shadow-lg leading-none text-[#fcdb00]">{String(timeLeft?.minutes || 0).padStart(2, '0')}</span>
-          <span className="text-[10px] text-white opacity-50 uppercase tracking-[0.2em] font-poppins font-medium">MIN</span>
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl md:text-4xl font-black drop-shadow-lg leading-none text-[#fcdb00]">{String(timeLeft?.seconds || 0).padStart(2, '0')}</span>
-          <span className="text-[10px] text-white opacity-50 uppercase tracking-[0.2em] font-poppins font-medium">SEG</span>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Banner Hot Sale removido
+const CountdownBanner = () => null;
 
 export default function Home() {
   const [cart, setCart] = useState([]);
   const [products, setProducts] = useState(initialProducts);
   const [promos, setPromos] = useState([]);
   const [homeSections, setHomeSections] = useState([]); 
-  const [homeLayout, setHomeLayout] = useState(DEFAULT_HOME_LAYOUT);
+  const [homeLayout, setHomeLayout] = useState([]);
   const [communityVideos, setCommunityVideos] = useState(INITIAL_COMMUNITY_VIDEOS);
   const [activeCommunityVideoId, setActiveCommunityVideoId] = useState(null);
   const [flippedCommunityCards, setFlippedCommunityCards] = useState({});
@@ -456,13 +395,22 @@ export default function Home() {
   }, [products, activeFilter.dept]);
 
   const normalizedHomeLayout = useMemo(() => {
-    const incoming = Array.isArray(homeLayout) ? homeLayout : DEFAULT_HOME_LAYOUT;
-    const merged = DEFAULT_HOME_LAYOUT.map(defaultItem => {
-      const saved = incoming.find(item => item.id === defaultItem.id) || {};
-      return { ...defaultItem, ...saved, active: saved.active !== false };
+    const fallback = buildDefaultHomeLayout(homeSections);
+    const incoming = Array.isArray(homeLayout) && homeLayout.length ? homeLayout : fallback;
+    const mergedMap = new Map();
+
+    fallback.forEach(item => mergedMap.set(item.id, { ...item }));
+    incoming.forEach(item => {
+      const base = mergedMap.get(item.id) || {
+        id: item.id,
+        label: item.label || homeSections.find(section => section.id === item.id)?.title || 'Bloque',
+        type: item.id === 'community' ? 'community' : 'section',
+      };
+      mergedMap.set(item.id, { ...base, ...item, active: item.active !== false });
     });
-    return merged.sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
-  }, [homeLayout]);
+
+    return Array.from(mergedMap.values()).sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+  }, [homeLayout, homeSections]);
 
   const slugify = (text) => text.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');            
 
@@ -476,20 +424,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const savedPrize = localStorage.getItem('hotSalePrize');
-        const pendingPrize = localStorage.getItem('pendingPrize');
-        const hasSpun = localStorage.getItem('hotSaleSpun');
-        
-        if (savedPrize) setLocalRoulettePrize(JSON.parse(savedPrize));
-        if (pendingPrize) setWonPrizeData(JSON.parse(pendingPrize)); 
-
-        if (hasSpun === 'true') {
-            setHasSpunLocal(true);
-        } else {
-            setTimeout(() => setShowRouletteModal(true), 1500);
-        }
-    }
+    setLocalRoulettePrize(null);
+    setWonPrizeData(null);
+    setHasSpunLocal(false);
+    setShowRouletteModal(false);
   }, []);
 
   useEffect(() => {
@@ -565,7 +503,7 @@ export default function Home() {
       });
       const unsubscribeHomeLayout = onSnapshot(doc(firebaseRefs.db, 'settings', 'home_layout'), (snap) => {
         const sections = snap.exists() ? snap.data()?.sections : null;
-        setHomeLayout(Array.isArray(sections) && sections.length ? sections : DEFAULT_HOME_LAYOUT);
+        setHomeLayout(Array.isArray(sections) ? sections : []);
       });
       const unsubscribeDeptIcons = onSnapshot(doc(firebaseRefs.db, 'settings', 'departments'), (snap) => {
         if (snap.exists()) { setDeptIcons(snap.data().icons || {}); }
@@ -746,37 +684,8 @@ export default function Home() {
   const getUnitPromoPrice = (item) => { const promo = promos.find(p => p.category === item.category); if (promo) { const catCount = cart.filter(i => i.category === item.category).reduce((acc, curr) => acc + curr.qty, 0); if (catCount >= promo.minQty) return promo.totalPrice / promo.minQty; } return item.price; };
   
   const calculateTotal = (cartData = cart) => {
-      let subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
-      let discountAmount = 0;
-
-      if (localRoulettePrize) {
-          const totalItems = cartData.reduce((acc, item) => acc + item.qty, 0);
-
-          if (localRoulettePrize.id === 'off20') {
-              // Solo aplica si lleva 2 o más productos
-              if (totalItems >= 2) {
-                  // Comercial: El descuento del 2do se aplica al de menor o igual valor
-                  let minPrice = Infinity;
-                  cartData.forEach(item => { 
-                    const price = item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item); 
-                    if (price < minPrice) minPrice = price; 
-                  });
-                  discountAmount = minPrice * (localRoulettePrize.value / 100);
-              }
-          } else if (localRoulettePrize.id === 'off15') {
-              // Solo aplica si el subtotal llega a los 30.000
-              if (subtotal >= 30000) {
-                  discountAmount = subtotal * (localRoulettePrize.value / 100);
-              }
-          } else if (localRoulettePrize.type === 'percent') {
-              // Los premios off5 y off10 aplican al total del carrito
-              discountAmount = subtotal * (localRoulettePrize.value / 100);
-          }
-          subtotal -= discountAmount;
-      }
-
-      let envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
-      if (localRoulettePrize && localRoulettePrize.type === 'shipping' && deliveryMethod === 'envio' && shippingType === 'moto') { envio = 0; }
+      const subtotal = cartData.reduce((acc, item) => acc + (item.qty * (item.isUpsell ? item.upsellPrice : getUnitPromoPrice(item))), 0);
+      const envio = (deliveryMethod === 'envio' && shippingType === 'moto') ? shippingCost : 0;
       return subtotal + envio;
   };
 
@@ -1134,10 +1043,10 @@ export default function Home() {
     const CommunityProductButton = ({ video, product, compact = false }) => (
       <button
         onClick={(e) => handleCommunityProductClick(video, product, e)}
-        className={`${compact ? 'w-10 h-10 rounded-xl text-sm' : 'w-full py-3 rounded-2xl text-[10px]'} bg-[#fcdb00] text-[#111111] font-black uppercase tracking-widest hover:bg-[#111111] hover:text-[#fcdb00] active:scale-95 transition-all font-poppins flex items-center justify-center gap-2`}
+        className={`${compact ? 'w-10 h-10 rounded-xl text-sm' : 'w-full py-2.5 rounded-xl text-[10px]'} bg-[#fcdb00] text-[#111111] font-black uppercase tracking-widest hover:bg-[#f5d300] active:scale-95 transition-all font-poppins flex items-center justify-center gap-2`}
         title={product ? `Agregar ${product.name}` : 'Ver catálogo'}
       >
-        {compact ? <i className="fas fa-cart-plus"></i> : <>{product ? 'Agregar' : 'Catálogo'} <i className={`fas ${product ? 'fa-cart-plus' : 'fa-arrow-right'} text-[10px]`}></i></>}
+        {compact ? <i className="fas fa-cart-plus"></i> : <>{product ? 'Ver productos' : 'Catálogo'} <i className={`fas ${product ? 'fa-box-open' : 'fa-arrow-right'} text-[10px]`}></i></>}
       </button>
     );
 
@@ -1150,10 +1059,10 @@ export default function Home() {
       return (
         <article
           key={cardId}
-          className="snap-start flex-shrink-0 w-[82vw] sm:w-[360px] lg:w-[390px] community-card-enter"
+          className="snap-center flex-shrink-0 w-[82vw] sm:w-[320px] lg:w-[350px] community-card-enter"
           style={{ transitionDelay: `${index * 80}ms` }}
         >
-          <div style={{ perspective: '1600px' }} className="h-[600px] md:h-[640px]">
+          <div style={{ perspective: '1600px' }} className="h-[468px] md:h-[520px]">
             <div
               style={{
                 position: 'relative',
@@ -1164,45 +1073,37 @@ export default function Home() {
                 transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
               }}
             >
-              {/* FRENTE: VIDEO */}
               <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden',
-                }}
-                className="rounded-[2rem] overflow-hidden bg-[#111111] border border-white/10 shadow-[0_22px_55px_rgba(0,0,0,0.32)]"
+                style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                className="rounded-[1.8rem] overflow-hidden bg-[#0d0d0d] border border-[#1f1f1f] shadow-[0_16px_38px_rgba(0,0,0,0.18)]"
               >
-                <div className="relative h-[410px] md:h-[450px] bg-black overflow-hidden">
+                <div className="relative h-[348px] md:h-[390px] bg-black overflow-hidden">
                   <video
                     src={video.videoUrl}
-                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
+                    className="w-full h-full object-cover"
                     controls
                     playsInline
                     preload="metadata"
                     onPlay={() => trackCommunityView(video)}
                   />
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/75 to-transparent"></div>
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/70 to-transparent"></div>
                   <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
                     <div className="flex flex-wrap gap-2">
                       {video.featured && (
-                        <span className="bg-[#fcdb00] text-[#111111] px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins shadow-lg">Destacado</span>
+                        <span className="bg-[#fcdb00] text-[#111111] px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins">Destacado</span>
                       )}
-                      <span className="bg-black/65 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins border border-white/10">{video.type || '028'}</span>
+                      <span className="bg-black/75 text-white px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins border border-white/10">{video.type || '028'}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-5 flex flex-col h-[190px] md:h-[190px]">
-                  <p className="text-[#fcdb00] text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-2 truncate">{video.creator || '028 Community'}</p>
-                  <h3 className="font-bebas text-3xl uppercase tracking-wide leading-none mb-2 line-clamp-2">{video.title || 'Contenido real 028'}</h3>
-                  <p className="text-white/55 text-xs leading-relaxed font-poppins line-clamp-2 mb-4">{video.description || 'Referencias reales de nuestra comunidad.'}</p>
+                <div className="px-4 pb-4 pt-5 md:px-5 md:pb-5 md:pt-5 flex flex-col h-[120px] md:h-[130px]">
+                  <h3 className="font-bebas text-[2rem] md:text-[2.15rem] uppercase tracking-wide leading-none mb-3 line-clamp-1 text-white">{video.title || 'Contenido real 028'}</h3>
 
                   <div className="mt-auto grid grid-cols-[1fr_auto] gap-2 items-center">
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="community-glow-button w-full py-3 rounded-2xl bg-white/10 hover:bg-white/16 border border-white/10 text-white text-[10px] font-black uppercase tracking-[0.15em] transition-all font-poppins flex items-center justify-center gap-2"
+                      className="w-full py-2.5 rounded-xl bg-[#161616] hover:bg-[#1d1d1d] border border-white/10 text-white text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] transition-all font-poppins flex items-center justify-center gap-2"
                     >
                       <i className="fas fa-box-open text-[#fcdb00]"></i> Ver productos
                     </button>
@@ -1211,66 +1112,55 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* DORSO: PRODUCTOS */}
               <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  transform: 'rotateY(180deg)',
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden',
-                }}
-                className="rounded-[2rem] overflow-hidden bg-[linear-gradient(180deg,#181818_0%,#070707_100%)] border border-white/10 shadow-[0_22px_55px_rgba(0,0,0,0.32)]"
+                style={{ position: 'absolute', inset: 0, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                className="rounded-[1.8rem] overflow-hidden bg-[#0d0d0d] border border-[#1f1f1f] shadow-[0_16px_38px_rgba(0,0,0,0.18)]"
               >
-                <div className="relative h-full p-5 flex flex-col">
-                  <div className="absolute -top-20 -right-20 w-56 h-56 bg-[#fcdb00]/30 rounded-full blur-[80px] pointer-events-none"></div>
-                  <div className="relative z-10 flex items-start justify-between gap-4 mb-4">
+                <div className="h-full p-4 md:p-5 flex flex-col">
+                  <div className="flex items-start justify-between gap-4 mb-4">
                     <div>
                       <p className="text-[#fcdb00] text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-2">Productos del video</p>
-                      <h3 className="font-bebas text-3xl uppercase tracking-wide leading-none line-clamp-2">{video.title || 'Contenido real 028'}</h3>
-                      <p className="text-white/50 text-xs font-poppins mt-2">Estos son los productos que aparecen o se recomiendan en este contenido.</p>
+                      <h3 className="font-bebas text-[2rem] uppercase tracking-wide leading-none line-clamp-2 text-white">{video.title || 'Contenido real 028'}</h3>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-10 h-10 rounded-full bg-white/8 hover:bg-white/14 border border-white/10 transition-all flex items-center justify-center text-white/80 hover:text-white flex-shrink-0"
+                      className="w-10 h-10 rounded-full bg-[#161616] hover:bg-[#1d1d1d] border border-white/10 transition-all flex items-center justify-center text-white/80 hover:text-white flex-shrink-0"
                       title="Volver al video"
                     >
                       <i className="fas fa-undo text-sm"></i>
                     </button>
                   </div>
 
-                  <div className="relative z-10 grid gap-3 overflow-y-auto pr-1 flex-1 no-scrollbar">
-                    {productList.length > 0 ? productList.map((product) => (
-                      <div key={`product-${cardId}-${product.id}`} className="bg-white text-[#111111] rounded-[1.35rem] p-3 flex items-center gap-3 shadow-xl border border-white/10">
-                        <div className="w-14 h-14 rounded-xl bg-[#f2f2f2] p-1.5 flex-shrink-0">
+                  <div className="grid gap-3 overflow-y-auto pr-1 flex-1 no-scrollbar">
+                    {productList.length > 0 ? productList.slice(0,3).map((product) => (
+                      <div key={`product-${cardId}-${product.id}`} className="bg-[#f7f7f7] text-[#111111] rounded-[1.15rem] p-3 flex items-center gap-3 border border-black/5">
+                        <div className="w-12 h-12 rounded-xl bg-white p-1.5 flex-shrink-0">
                           <img src={product.image} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-400 font-poppins mb-1">Producto visto</p>
-                          <p className="font-bebas text-xl uppercase tracking-wide truncate leading-none">{product.name}</p>
+                          <p className="font-bebas text-lg uppercase tracking-wide truncate leading-none">{product.name}</p>
                           <p className="text-[#111111] text-sm font-black mt-1">{CONFIG.currencySymbol}{formatPrice(product.price)}</p>
                         </div>
                         <CommunityProductButton video={video} product={product} compact />
                       </div>
                     )) : (
-                      <div className="bg-white/8 border border-white/10 rounded-[1.4rem] p-5 text-center">
+                      <div className="bg-[#161616] border border-white/10 rounded-[1.2rem] p-5 text-center">
                         <i className="fas fa-box-open text-[#fcdb00] text-2xl mb-3"></i>
                         <p className="text-white text-sm font-black uppercase tracking-widest font-poppins">Sin productos cargados</p>
-                        <p className="text-white/50 text-xs font-poppins mt-2">Agregalos desde el admin usando los IDs separados por coma.</p>
                       </div>
                     )}
                   </div>
 
-                  <div className="relative z-10 grid grid-cols-2 gap-2 mt-4">
+                  <div className="grid grid-cols-2 gap-2 mt-4">
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/14 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all font-poppins"
+                      className="w-full py-3 rounded-xl bg-[#161616] hover:bg-[#1d1d1d] border border-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all font-poppins"
                     >
                       Volver
                     </button>
                     <button
                       onClick={(e) => handleCommunityProductClick(video, mainProduct, e)}
-                      className="w-full py-3 rounded-2xl bg-[#fcdb00] text-[#111111] text-[10px] font-black uppercase tracking-widest transition-all font-poppins hover:bg-white"
+                      className="w-full py-3 rounded-xl bg-[#fcdb00] text-[#111111] text-[10px] font-black uppercase tracking-widest transition-all font-poppins hover:bg-[#f5d300]"
                     >
                       {mainProduct ? 'Agregar principal' : 'Catálogo'}
                     </button>
@@ -1284,37 +1174,19 @@ export default function Home() {
     };
 
     return (
-      <section id="community-section" className="mb-20 reveal-on-scroll community-section-bleed">
-        <div className="relative overflow-hidden rounded-[2.3rem] md:rounded-[2.8rem] bg-[#050505] text-white border-y border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-          <div className="absolute inset-0 opacity-35 pointer-events-none">
-            <div className="absolute -top-32 right-0 w-[28rem] h-[28rem] rounded-full bg-[#fcdb00] blur-[110px]"></div>
-            <div className="absolute top-1/4 -left-24 w-[24rem] h-[24rem] rounded-full bg-white/20 blur-[140px]"></div>
-            <div className="absolute -bottom-24 left-1/3 w-[26rem] h-[26rem] rounded-full bg-[#fcdb00]/30 blur-[120px]"></div>
+      <section id="community-section" className="mb-14 md:mb-18 reveal-on-scroll">
+        <div className="px-1 md:px-0">
+          <div className="pt-2 mb-4 md:mb-6">
+            <span className="inline-flex items-center gap-2 bg-[#111111] text-white px-3 py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-3">
+              <i className="fas fa-users text-[9px] text-[#fcdb00]"></i> Comunidad real
+            </span>
+            <h2 className="text-4xl md:text-6xl font-bebas uppercase tracking-wide leading-none text-[#111111]">
+              028 Community
+            </h2>
           </div>
 
-          <div className="relative z-10 px-4 py-8 md:px-10 md:py-12 xl:px-14">
-            <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5 mb-8 md:mb-10">
-              <div>
-                <span className="inline-flex items-center gap-2 bg-[#fcdb00] text-[#111111] px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-4 shadow-[0_8px_24px_rgba(252,219,0,0.25)]">
-                  <i className="fas fa-users text-[9px]"></i> Comunidad real
-                </span>
-                <h2 className="text-5xl md:text-7xl font-bebas uppercase tracking-wide leading-none">
-                  028 Community
-                </h2>
-                <p className="text-white/70 text-sm md:text-base font-poppins mt-3 max-w-3xl leading-relaxed">
-                  Contenido real, referencias y experiencias para que compres con más confianza. Tocá cada card para descubrir los productos del video.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 md:gap-3 text-[10px] font-black uppercase tracking-widest font-poppins text-white/55">
-                <span className="bg-white/10 border border-white/10 rounded-full px-3 py-2"><i className="fas fa-check text-[#fcdb00] mr-2"></i>Reviews</span>
-                <span className="bg-white/10 border border-white/10 rounded-full px-3 py-2"><i className="fas fa-check text-[#fcdb00] mr-2"></i>Referencias</span>
-                <span className="bg-white/10 border border-white/10 rounded-full px-3 py-2"><i className="fas fa-check text-[#fcdb00] mr-2"></i>Productos reales</span>
-              </div>
-            </div>
-
-            <div className="flex overflow-x-auto gap-4 md:gap-6 no-scrollbar snap-x pb-3 pr-10 mask-image-gradient">
-              {visibleVideos.map((video, index) => renderCommunityCard(video, index))}
-            </div>
+          <div className="mt-2 flex overflow-x-auto gap-3 md:gap-5 no-scrollbar snap-x snap-mandatory pb-0 pr-6">
+            {visibleVideos.map((video, index) => renderCommunityCard(video, index))}
           </div>
         </div>
       </section>
@@ -1322,8 +1194,28 @@ export default function Home() {
   };
 
 
-  const renderHomeVidrieraSections = () => {
-    if (homeSections.length === 0) {
+  
+const renderSingleHomeSection = (sec, sectionIndex = 0) => {
+    const secProducts = sec.productIds?.map(pid => products.find(p => p.id === pid)).filter(Boolean) || [];
+    if (secProducts.length === 0) return null;
+    return (
+      <div key={sec.id} className="mb-20 reveal-on-scroll">
+        <div className="flex justify-between items-end mb-6 pl-2 border-b-2 border-[#f2f2f2] pb-3">
+          <h2 className="text-4xl md:text-6xl font-bebas text-[#111111] tracking-wide uppercase">
+            <i className={`${AVAILABLE_ICONS.find(i => i.id === sec.icon)?.prefix || 'fas'} ${sec.icon || 'fa-star'} ${sec.iconColor || 'text-[#fcdb00]'} mr-3 drop-shadow-sm`}></i>{sec.title}
+          </h2>
+          <button onClick={() => navigateTo('catalog')} className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#111111] hover:text-[#fcdb00] transition-colors bg-white/50 px-5 py-2.5 rounded-full border border-white hover:border-[#f2f2f2]">Ver Catálogo <i className="fas fa-arrow-right"></i></button>
+        </div>
+        <div className={sec.layout === 'vertical' ? "flex flex-wrap gap-3 md:gap-5" : "flex overflow-x-auto gap-4 md:gap-6 no-scrollbar pb-8 snap-x mask-image-gradient pr-8"}>{secProducts.map((p, index) => renderProductCard(p, index, true, sec.layout))}</div>
+        <button onClick={() => navigateTo('catalog')} className="md:hidden w-full mt-2 bg-white/70 backdrop-blur-xl border border-white shadow-sm text-[#111111] py-4 rounded-xl font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform font-poppins">ver todos los modelos <i className="fas fa-arrow-right text-[#fcdb00]"></i></button>
+      </div>
+    );
+  };
+
+  const renderHomeVidrieraSections = (onlySectionIds = null) => {
+    const idSet = Array.isArray(onlySectionIds) ? new Set(onlySectionIds) : null;
+    const sectionsToRender = idSet ? homeSections.filter(sec => idSet.has(sec.id)) : homeSections;
+    if (sectionsToRender.length === 0) {
       return (
         <div className="text-center py-20">
           <div className="w-12 h-12 border-4 border-[#f2f2f2] border-t-[#fcdb00] rounded-full animate-spin mx-auto mb-4"></div>
@@ -1331,32 +1223,19 @@ export default function Home() {
         </div>
       );
     }
-
-    return homeSections.map((sec, sectionIndex) => {
-      const secProducts = sec.productIds?.map(pid => products.find(p => p.id === pid)).filter(Boolean) || [];
-      if(secProducts.length === 0) return null;
-      return (
-        <div key={sec.id} className="mb-20 reveal-on-scroll">
-          <div className="flex justify-between items-end mb-6 pl-2 border-b-2 border-[#f2f2f2] pb-3">
-            <h2 className="text-4xl md:text-6xl font-bebas text-[#111111] tracking-wide uppercase">
-              <i className={`${AVAILABLE_ICONS.find(i => i.id === sec.icon)?.prefix || 'fas'} ${sec.icon || 'fa-star'} ${sec.iconColor || 'text-[#fcdb00]'} mr-3 drop-shadow-sm`}></i>{sec.title}
-            </h2>
-            <button onClick={() => navigateTo('catalog')} className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#111111] hover:text-[#fcdb00] transition-colors bg-white/50 px-5 py-2.5 rounded-full border border-white hover:border-[#f2f2f2]">Ver Catálogo <i className="fas fa-arrow-right"></i></button>
-          </div>
-          <div className={sec.layout === 'vertical' ? "flex flex-wrap gap-3 md:gap-5" : "flex overflow-x-auto gap-4 md:gap-6 no-scrollbar pb-8 snap-x mask-image-gradient pr-8"}>{secProducts.map((p, index) => renderProductCard(p, index, true, sec.layout))}</div>
-          <button onClick={() => navigateTo('catalog')} className="md:hidden w-full mt-2 bg-white/70 backdrop-blur-xl border border-white shadow-sm text-[#111111] py-4 rounded-xl font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform font-poppins">ver todos los modelos <i className="fas fa-arrow-right text-[#fcdb00]"></i></button>
-        </div>
-      );
-    });
+    return sectionsToRender.map((sec, sectionIndex) => renderSingleHomeSection(sec, sectionIndex));
   };
 
   const renderOrderedHomeBlocks = () => {
     return normalizedHomeLayout
       .filter(block => block.active !== false)
-      .map(block => {
-        if (block.id === 'vidriera') return <React.Fragment key="home-block-vidriera">{renderHomeVidrieraSections()}</React.Fragment>;
-        if (block.id === 'community') return <React.Fragment key="home-block-community">{renderCommunitySection()}</React.Fragment>;
-        return null;
+      .map((block) => {
+        if (block.id === 'community') {
+          return <React.Fragment key="home-block-community">{renderCommunitySection()}</React.Fragment>;
+        }
+        const sec = homeSections.find(section => section.id === block.id);
+        if (!sec) return null;
+        return <React.Fragment key={`home-block-${block.id}`}>{renderSingleHomeSection(sec)}</React.Fragment>;
       });
   };
 
@@ -1390,7 +1269,7 @@ export default function Home() {
     );
   };
   return (
-    <div className="bg-[#f2f2f2] text-[#111111] font-poppins flex flex-col relative pb-20 md:pb-0 min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
+    <div className="bg-[#f6f6f6] text-[#111111] font-poppins flex flex-col relative min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;700;900&display=swap');
         .font-bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
@@ -1430,12 +1309,16 @@ export default function Home() {
           margin-left: calc(50% - 50vw);
           margin-right: calc(50% - 50vw);
         }
-        @keyframes communityGlowPulse {
-          0%, 100% { box-shadow: 0 0 0 rgba(252,219,0,0.0), 0 10px 24px rgba(252,219,0,0.12); }
-          50% { box-shadow: 0 0 0 6px rgba(252,219,0,0.06), 0 16px 34px rgba(252,219,0,0.24); }
+
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
-        .community-glow-button {
-          animation: communityGlowPulse 2.8s ease-in-out infinite;
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+          background: transparent;
         }
 
         /* --- SOLUCIÓN AL ZOOM MOLESTO EN CELULARES --- */
@@ -1465,22 +1348,6 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <button 
-              onClick={() => {
-                if (!user || user.isAnonymous) {
-                    showToast("⚠️ Iniciá sesión para poder girar");
-                    handleGoogleLogin();
-                    return;
-                }
-                if (hasSpunLocal) {
-                    if (localRoulettePrize) { setWonPrizeData(localRoulettePrize); setShowResultModal(true); }
-                    else { showToast("Ya utilizaste tu tiro 🎁"); }
-                } else { setShowRouletteModal(true); }
-              }} 
-              className={`hidden md:flex text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full items-center gap-2 transition-all border ${hasSpunLocal && localRoulettePrize ? 'bg-[#fcdb00] text-[#111111] border-[#fcdb00]' : (hasSpunLocal ? 'bg-white/5 text-gray-500 border-transparent' : 'bg-[#fcdb00] text-[#111111] border-[#fcdb00] hover:bg-white animate-pulse')}`}
-          >
-              <i className="fas fa-gift text-sm"></i> {localRoulettePrize ? 'Mi Premio' : 'Ruleta'}
-          </button>
           
           <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:text-[#fcdb00] transition-colors">
               <i className="fas fa-shopping-bag text-2xl"></i>
@@ -1549,107 +1416,13 @@ export default function Home() {
 
         </div></div></div></div>)}
 
-      {/* --- MODAL NOTIFICACIÓN CENTRAL DE PREMIO --- */}
-      {showResultModal && wonPrizeData && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#111111]/95 backdrop-blur-xl" onClick={() => localRoulettePrize && setShowResultModal(false)}></div>
-          <div className="relative bg-[#111111] p-8 md:p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-[#cca300]/50 text-center max-w-sm w-full animate-in zoom-in-95 duration-500 flex flex-col items-center overflow-hidden">
-             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#cca300]/20 via-transparent to-transparent pointer-events-none"></div>
-             <div className="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(252,219,0,0.5)] relative z-10">
-                {wonPrizeData.id === 'sorpresa' ? '🏆' : (wonPrizeData.id === 'labubu' ? '🎁' : '✨')}
-             </div>
-             <h3 className="font-bebas text-4xl md:text-5xl uppercase mb-4 text-white relative z-10 tracking-wide">
-                 ¡Felicidades!
-             </h3>
-             <div className="bg-[#1a1a1a] text-[#fcdb00] px-6 py-4 rounded-xl border border-[#cca300]/40 shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] mb-6 w-full relative overflow-hidden z-10">
-               <div className="absolute top-0 left-[-100%] w-[50%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[shimmerFull_3s_infinite_linear]"></div>
-               <span className="font-bebas text-3xl tracking-wider block drop-shadow-md">{wonPrizeData.text}</span>
-             </div>
-             <div className="relative z-10 font-poppins mb-6">
-                 <p className="text-sm md:text-base font-medium text-gray-300 leading-relaxed px-2">
-                    {wonPrizeData.description}
-                 </p>
-             </div>
-             <button onClick={() => claimPrize(wonPrizeData)} className="w-full bg-gradient-to-b from-[#ffea60] to-[#dfb411] text-[#111111] py-4 rounded-xl font-bebas text-2xl uppercase tracking-wider shadow-[0_6px_0_#9a7b0a,0_10px_20px_rgba(0,0,0,0.5)] active:translate-y-[6px] active:shadow-[0_0px_0_#9a7b0a,0_0px_0_rgba(0,0,0,0)] transition-all relative z-10">
-               {localRoulettePrize ? 'Cerrar' : 'Reclamar Premio'}
-             </button>
-             <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-5 font-bold relative z-10 font-poppins">
-                {wonPrizeData.id === 'off5' ? 'VÁLIDO POR 30 DÍAS' : 'PROMO VÁLIDA HASTA QUE TERMINE EL HOT 028'}
-             </p>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL RULETA HOT SALE --- */}
-      {showRouletteModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 transition-opacity duration-500" onClick={() => !isSpinning && setShowRouletteModal(false)}></div>
-          <div className="relative w-full max-w-[480px] rounded-[2.5rem] bg-[#111111]/40 backdrop-blur-[40px] border-[0.5px] border-white/20 shadow-[0_20px_60px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] p-8 pt-14 flex flex-col items-center animate-in zoom-in-95 duration-500 overflow-hidden">
-            <div className="absolute top-[10%] right-[10%] w-[300px] h-[300px] bg-white/5 blur-[100px] rounded-full pointer-events-none z-0"></div>
-            <img src="https://i.ibb.co/gZgzZJ35/Dise-o-sin-t-tulo-6.png" className="absolute -top-[1%] -right-[16%] w-[103%] h-auto max-w-none z-0 object-contain pointer-events-none opacity-100" alt="Fondo Mascota" />
-            {!isSpinning && (
-                <button onClick={() => setShowRouletteModal(false)} className="absolute top-5 right-5 w-11 h-11 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center hover:bg-white/15 transition-all z-30 text-gray-500 hover:text-white shadow-xl">
-                    <i className="fas fa-times text-lg"></i>
-                </button>
-            )}
-            <div className="relative z-30 w-full h-[80px] flex items-center justify-center mb-6 mt-2 pointer-events-none">
-              <img src="https://i.ibb.co/whtCF6j3/Dise-o-sin-t-tulo-11.png" alt="Hot Sale 028" className="absolute top-1/2 left-1/9 -translate-x-1/3 -translate-y-[50%] w-[202px] md:w-[250px] max-w-none drop-shadow-xl" />
-            </div>
-            <div className="relative w-75 h-75 md:w-84 md:h-84 mb-4 mt-2 z-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full shadow-[0_0_40px_rgba(255,215,0,0.15)] pointer-events-none z-0"></div>
-              <div className="w-full h-full rounded-full relative overflow-hidden border-[2px] border-[rgba(255,215,0,0.2)] shadow-[inset_0_0_30px_rgba(0,0,0,0.6)] z-10"
-                style={{ 
-                  background: 'conic-gradient(#111111 0deg 60deg, #1a1a1a 60deg 120deg, #111111 120deg 180deg, #1a1a1a 180deg 240deg, #111111 240deg 300deg, #050505 300deg 360deg)',
-                  transform: `rotate(${rouletteRotation}deg)`, 
-                  transition: isSpinning ? 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none',
-                }}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none z-0"></div>
-                {[0, 60, 120, 180, 240, 300].map((deg, i) => (
-                    <div key={`line-${i}`} className="absolute top-0 left-1/2 w-[1.5px] h-1/2 bg-[rgba(255,220,70,0.45)] origin-bottom z-10" style={{ transform: `translateX(-50%) rotate(${deg}deg)` }}></div>
-                ))}
-                {ROULETTE_PRIZES.map((prize, idx) => {
-                  const angle = 60 * idx; 
-                  return (
-                    <div key={idx} className="absolute inset-0 z-20" style={{ transform: `rotate(${angle + 30}deg)` }}>
-                      <div className="absolute top-0 left-0 right-0 h-1/2 flex items-start justify-center pt-5 md:pt-6">
-                        <span className={`font-bebas font-bold uppercase whitespace-nowrap text-center text-[#fcdb00] drop-shadow-md ${prize.text.length > 15 ? 'text-[13px] md:text-[15px] tracking-normal' : 'text-[15px] md:text-[17px] tracking-wider'}`} style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                          {prize.text}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 md:w-20 md:h-20 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.8)] z-30 pointer-events-none border-[1.5px] border-[#cca300] bg-[#050505] flex items-center justify-center overflow-hidden"></div>
-              <img src="https://i.ibb.co/G4f7mmwn/converted.png" className="absolute top-[-60px] left-1/3 -translate-x-1/6 w-[87px] h-auto z-50 drop-shadow-[20px_20px_20px_rgba(0,0,0,0.7)] pointer-events-none" alt="Puntero Dedo" />
-            </div>
-            <div className="relative w-full z-30 group active:scale-[0.98] transition-transform">
-                {(!user || user.isAnonymous) ? (
-                    <button onClick={handleGoogleLogin} className="w-full py-4 md:py-5 rounded-2xl font-bebas text-2xl md:text-3xl uppercase tracking-wider flex items-center justify-center gap-3 relative overflow-hidden transition-all duration-300 bg-[#1a1a1a] text-white border border-[#333] shadow-[0_8px_0_#0a0a0a] active:translate-y-[8px] active:shadow-[0_0px_0_#0a0a0a]">
-                        <i className="fab fa-google text-[#fcdb00]"></i> INICIAR SESIÓN PARA GIRAR
-                    </button>
-                ) : (
-                    <button onClick={handleSpinRoulette} disabled={isSpinning} className={`w-full py-4 md:py-5 rounded-2xl font-bebas text-3xl md:text-4xl uppercase tracking-wider flex items-center justify-center gap-3 relative overflow-hidden transition-all duration-300 ${isSpinning ? 'bg-gray-800 text-gray-500 cursor-not-allowed shadow-none' : 'bg-gradient-to-b from-[#ffea60] to-[#dfb411] text-[#111111] shadow-[0_8px_0_#9a7b0a,0_20px_40px_rgba(0,0,0,0.5),inset_0_2px_3px_rgba(255,255,255,0.6)] hover:brightness-110 active:translate-y-[8px] active:shadow-[0_0px_0_#9a7b0a,0_0px_0_rgba(0,0,0,0)]'}`}>
-                        {!isSpinning && ( <div className="absolute top-0 left-0 w-[60px] h-full animate-shimmer-sweep bg-white/50 blur-[6px] pointer-events-none"></div> )}
-                        {isSpinning ? <><i className="fas fa-circle-notch fa-spin text-2xl"></i> Girando...</> : '¡PROBA SUERTE!'}
-                    </button>
-                )}
-            </div>
-            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mt-5 text-center font-poppins relative z-30 opacity-80">
-                1 giro por cliente • premios limitados
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* --- INICIO CONTENIDO --- */}
       {currentView === 'home' ? (
         <>
           <header className="relative w-full h-[35vh] md:h-[55vh] flex items-center justify-center bg-[#111111] overflow-hidden border-b border-[#111111]">
             <img src={CONFIG.bannerImage} alt="Banner 028" className="absolute inset-0 w-full h-full object-cover object-center" />
           </header>
-          <main className="flex-grow px-4 md:px-8 pt-10 max-w-7xl mx-auto min-h-[50vh] pb-32 w-full">
+          <main className="flex-grow px-4 md:px-8 pt-10 max-w-7xl mx-auto min-h-[50vh] pb-8 md:pb-16 w-full">
             <div className="md:hidden relative mb-12 reveal-on-scroll">
                 <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 <input type="text" placeholder="Buscar productos, marcas..." value={searchTerm} onChange={(e) => {setSearchTerm(e.target.value); setCurrentView('catalog');}} className="w-full bg-white/70 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] pl-12 pr-6 py-4 rounded-2xl text-sm font-bold outline-none focus:border-[#fcdb00] focus:bg-white transition-all placeholder:text-gray-400 font-poppins" />
@@ -1690,7 +1463,7 @@ export default function Home() {
                   )}
               </div>
           </div>
-          <main className="flex-grow px-4 md:px-8 py-10 max-w-7xl mx-auto min-h-[50vh] pb-32 w-full">
+          <main className="flex-grow px-4 md:px-8 py-10 max-w-7xl mx-auto min-h-[50vh] pb-8 md:pb-16 w-full">
               {searchTerm && products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.category.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
                   <div className="text-center py-24 bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white shadow-sm"><div className="w-20 h-20 bg-[#f2f2f2] rounded-full flex items-center justify-center mx-auto mb-6"><i className="fas fa-ghost text-3xl text-gray-400"></i></div><h3 className="text-3xl font-bebas uppercase tracking-wide text-[#111111] mb-2">No encontramos nada</h3><p className="text-xs uppercase tracking-widest text-gray-500 font-poppins">Intenta buscar otro sabor o marca.</p></div>
               )}
@@ -1703,24 +1476,14 @@ export default function Home() {
           </main> 
       )}
 
-      {/* --- BOTONES INFERIORES NAVEGACION (MOBILE) --- */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#f2f2f2]/90 backdrop-blur-3xl border-t border-white shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40 pb-safe pt-2 px-2">
-          <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-              <button onClick={() => navigateTo('home')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='home' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-home text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Inicio</span></button>
-              <button onClick={() => navigateTo('catalog')} className={`flex flex-col items-center justify-center gap-1 w-full h-full rounded-xl transition-all ${currentView==='catalog' ? 'text-[#111111]' : 'text-gray-400 hover:text-gray-600'}`}><i className="fas fa-th-large text-xl mb-0.5"></i><span className="text-[9px] font-bebas uppercase tracking-wider">Catálogo</span></button>
-              <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center justify-center gap-1 w-full h-full text-[#111111] relative active:scale-95 transition-transform"><div className="relative bg-[#111111] w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"><i className="fas fa-shopping-bag text-lg text-white"></i>{getTotalItems() > 0 && (<span className="absolute -top-1.5 -right-1.5 bg-[#fcdb00] text-[#111111] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm border border-[#111111]">{getTotalItems()}</span>)}</div><span className="text-[9px] font-bebas uppercase tracking-wider mt-0.5">Bolsa</span></button>
-          </div>
-      </nav>
-
-      <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-auto relative z-30 rounded-t-[3rem] overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#fcdb00] to-transparent opacity-50"></div>
-          <div className="max-w-7xl mx-auto px-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16 text-xs md:text-sm">
-                  <div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.4)]" /></div><p className="text-gray-400 font-medium leading-relaxed pr-4 font-poppins">Redefinimos la experiencia de compra priorizando tu tiempo y confianza.</p></div>
-                  <div><h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Contacto</h4><ul className="space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones & Juramento,<br/>Belgrano, CABA.</span></li></ul></div>
+      <footer className="block bg-[#111111] text-white pt-8 md:pt-12 pb-6 md:pb-8 mt-auto relative z-30 rounded-t-[2rem] overflow-hidden">
+          <div className="max-w-7xl mx-auto px-5 md:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-6 mb-6 md:mb-10 text-xs md:text-sm">
+                  <div className="space-y-6"><div className="flex items-center gap-3"><img src={CONFIG.logoImage} alt="028Import Logo" className="h-12 md:h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(252,219,0,0.25)]" /></div><p className="text-gray-400 font-medium leading-relaxed md:pr-4 font-poppins max-w-sm">Compra rápida, referencias reales y atención directa por WhatsApp.</p></div>
+                  <div><h4 className="font-bebas text-[#fcdb00] text-xl md:text-2xl uppercase tracking-wider mb-4 md:mb-6">Contacto</h4><ul className="space-y-3 md:space-y-5 text-gray-300 font-poppins"><li className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00]"><i className="fab fa-whatsapp text-lg"></i></div><span className="text-base font-bold tracking-wider">11 5341 2358</span></li><li className="flex items-start gap-4 mt-2"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[#fcdb00] flex-shrink-0"><i className="fas fa-location-dot text-lg"></i></div><span className="pt-1">Miñones & Juramento,<br/>Belgrano, CABA.</span></li></ul></div>
                   <div>
-                    <h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Información Legal</h4>
-                    <ul className="space-y-4 text-gray-400 font-poppins font-medium">
+                    <h4 className="font-bebas text-[#fcdb00] text-xl md:text-2xl uppercase tracking-wider mb-4 md:mb-6">Información Legal</h4>
+                    <ul className="space-y-3 md:space-y-4 text-gray-400 font-poppins font-medium">
                       <li><button onClick={() => navigateTo('nosotros')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Quiénes Somos</button></li>
                       <li><button onClick={() => navigateTo('envios')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Logística de Envío</button></li>
                       <li><button onClick={() => navigateTo('pagos')} className="hover:text-white transition-colors flex items-center gap-2"><i className="fas fa-angle-right text-[#fcdb00] text-[10px]"></i> Medios de Pago</button></li>
@@ -1729,11 +1492,11 @@ export default function Home() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-bebas text-[#fcdb00] text-2xl uppercase tracking-wider mb-6">Nuestras Redes</h4>
+                    <h4 className="font-bebas text-[#fcdb00] text-xl md:text-2xl uppercase tracking-wider mb-4 md:mb-6">Nuestras Redes</h4>
                     <div className="flex gap-4">
-                      <a href="https://www.tiktok.com/@028.import" target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-tiktok text-2xl"></i></a>
-                      <a href="https://www.instagram.com/028.import" target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-instagram text-2xl"></i></a>
-                      <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#25D366] hover:text-white transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(37,211,102,0.3)]"><i className="fab fa-whatsapp text-2xl"></i></a>
+                      <a href="https://www.tiktok.com/@028.import" target="_blank" rel="noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-tiktok text-2xl"></i></a>
+                      <a href="https://www.instagram.com/028.import" target="_blank" rel="noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#fcdb00] hover:text-[#111111] transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(252,219,0,0.3)]"><i className="fab fa-instagram text-2xl"></i></a>
+                      <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noreferrer" className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-[#25D366] hover:text-white transition-all hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(37,211,102,0.3)]"><i className="fab fa-whatsapp text-2xl"></i></a>
                     </div>
                   </div>
               </div>
@@ -1990,22 +1753,6 @@ export default function Home() {
       )}
 
       {/* --- BOTONES FLOTANTES INDEPENDIENTES (Se esconden si el carrito se abre) --- */}
-      {!isCartOpen && !showRouletteModal && !selectedProduct && (
-        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] flex flex-col items-end gap-3 group">
-          <div className={`bg-white text-[#111111] p-3 md:p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-200 max-w-[180px] md:max-w-[200px] text-center transform transition-all duration-700 ease-out origin-bottom-right relative ${showTooltip ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-90 group-hover:translate-y-0 group-hover:opacity-100 group-hover:scale-100'}`}>
-            <p className="font-poppins font-bold text-[10px] md:text-xs">¿No sabés cuál elegir? Te ayudamos</p>
-            <div className="absolute bottom-[-6px] right-6 w-3 h-3 md:w-4 md:h-4 bg-white transform rotate-45 border-r border-b border-gray-200"></div>
-          </div>
-          
-          <button onClick={() => { if (!user || user.isAnonymous) { showToast("⚠️ Iniciá sesión para poder girar"); handleGoogleLogin(); return; } if (hasSpunLocal) { if (localRoulettePrize) setWonPrizeData(localRoulettePrize); setShowResultModal(true); } else { setShowRouletteModal(true); } }} className="pointer-events-auto w-24 md:w-36 h-auto hover:scale-105 transition-transform duration-300 drop-shadow-[0_5px_15px_rgba(252,219,0,0.3)] focus:outline-none origin-bottom-right md:translate-x-[20px] md:-translate-y-[10px]">
-             <img src="https://i.ibb.co/whtCF6j3/Dise-o-sin-t-tulo-11.png" className="w-full h-auto object-contain" alt="Hot Sale" />
-          </button>
-
-          <a href={`https://wa.me/${CONFIG.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white text-3xl shadow-[0_10px_30px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform duration-300 origin-bottom-right md:translate-x-[5px]">
-            <i className="fab fa-whatsapp"></i>
-          </a>
-        </div>
-      )}
 
       {/* --- MODAL DE PAGO OFFLINE --- */}
       {showPaymentModal && (

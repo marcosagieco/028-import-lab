@@ -152,10 +152,18 @@ const initialCommunityVideos = [
   }
 ];
 
-const DEFAULT_HOME_LAYOUT = [
-  { id: 'vidriera', label: 'Vidriera', order: 1, active: true },
-  { id: 'community', label: '028 Community', order: 2, active: true },
-];
+const buildDefaultHomeLayout = (sections = []) => {
+  const orderedSections = [...sections].sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+  if (!orderedSections.length) {
+    return [{ id: 'community', label: '028 Community', order: 1, active: true, type: 'community' }];
+  }
+  const [firstSection, ...restSections] = orderedSections;
+  return [
+    { id: firstSection.id, label: firstSection.title || 'Vidriera', order: 1, active: true, type: 'section' },
+    { id: 'community', label: '028 Community', order: 2, active: true, type: 'community' },
+    ...restSections.map((section, index) => ({ id: section.id, label: section.title || 'Vidriera', order: index + 3, active: true, type: 'section' })),
+  ];
+};
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('historial'); 
@@ -186,7 +194,7 @@ export default function AdminPage() {
   const [newUpsell, setNewUpsell] = useState({ productId: '', price: '' });
 
   const [homeSections, setHomeSections] = useState([]);
-  const [homeLayout, setHomeLayout] = useState(DEFAULT_HOME_LAYOUT);
+  const [homeLayout, setHomeLayout] = useState([]);
   const [newPromo, setNewPromo] = useState({ category: '', minQty: 2, totalPrice: '' });
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [newSectionIcon, setNewSectionIcon] = useState(AVAILABLE_ICONS[0]); 
@@ -204,13 +212,20 @@ export default function AdminPage() {
   const availableDepartments = useMemo(() => Array.from(new Set([...PREDEFINED_DEPARTMENTS, ...products.filter(p => !p.isDeleted).map(p => p.department).filter(Boolean)])), [products]);
   const availableCommunityProducts = useMemo(() => products.filter(p => !p.isDeleted && !p.isHidden).sort((a, b) => String(a.name).localeCompare(String(b.name))), [products]);
   const normalizedHomeLayout = useMemo(() => {
-    const incoming = Array.isArray(homeLayout) ? homeLayout : DEFAULT_HOME_LAYOUT;
-    const merged = DEFAULT_HOME_LAYOUT.map(defaultItem => {
-      const saved = incoming.find(item => item.id === defaultItem.id) || {};
-      return { ...defaultItem, ...saved, active: saved.active !== false };
+    const fallback = buildDefaultHomeLayout(homeSections);
+    const incoming = Array.isArray(homeLayout) && homeLayout.length ? homeLayout : fallback;
+    const mergedMap = new Map();
+    fallback.forEach(item => mergedMap.set(item.id, { ...item }));
+    incoming.forEach(item => {
+      const base = mergedMap.get(item.id) || {
+        id: item.id,
+        label: item.label || homeSections.find(section => section.id === item.id)?.title || 'Bloque',
+        type: item.id === 'community' ? 'community' : 'section',
+      };
+      mergedMap.set(item.id, { ...base, ...item, active: item.active !== false });
     });
-    return merged.sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
-  }, [homeLayout]);
+    return Array.from(mergedMap.values()).sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+  }, [homeLayout, homeSections]);
 
   const clientsList = useMemo(() => {
     const clientsMap = new Map();
@@ -284,7 +299,7 @@ export default function AdminPage() {
 
       onSnapshot(doc(firebaseRefs.db, 'settings', 'home_layout'), (snap) => {
         const sections = snap.exists() ? snap.data()?.sections : null;
-        setHomeLayout(Array.isArray(sections) && sections.length ? sections : DEFAULT_HOME_LAYOUT);
+        setHomeLayout(Array.isArray(sections) ? sections : []);
       });
 
       onSnapshot(doc(firebaseRefs.db, 'settings', 'departments'), (snap) => {
@@ -488,7 +503,7 @@ export default function AdminPage() {
     try {
       const normalized = sections
         .map((item, index) => ({ ...item, order: index + 1, active: item.active !== false }))
-        .filter(item => DEFAULT_HOME_LAYOUT.some(defaultItem => defaultItem.id === item.id));
+        .filter(item => item && item.id);
       await setDoc(doc(firebaseRefs.db, 'settings', 'home_layout'), {
         sections: normalized,
         updatedAt: serverTimestamp()
@@ -513,7 +528,7 @@ export default function AdminPage() {
   };
 
   const resetHomeLayout = () => {
-    saveHomeLayout(DEFAULT_HOME_LAYOUT);
+    saveHomeLayout(buildDefaultHomeLayout(homeSections));
   };
 
   const renderHomeOrderControls = () => (
@@ -521,7 +536,7 @@ export default function AdminPage() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
         <div>
           <h3 className={`text-2xl font-bebas uppercase tracking-wide ${theme.text}`}>Orden del inicio</h3>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Elegí si primero se ve la vidriera o 028 Community. Por defecto: Vidriera primero, Community después.</p>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Armá el orden real del inicio: podés poner una sección de vidriera, después Community, y abajo el resto. Por defecto queda: primera sección de vidriera, luego Community y después las demás.</p>
         </div>
         <button type="button" onClick={resetHomeLayout} className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-[#111111] hover:text-[#fcdb00] text-[10px] font-bold uppercase tracking-widest transition-all">Restaurar default</button>
       </div>
@@ -532,7 +547,7 @@ export default function AdminPage() {
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bebas text-xl ${block.active === false ? 'bg-gray-200 text-gray-400' : 'bg-[#111111] text-[#fcdb00]'}`}>{index + 1}</div>
               <div>
                 <p className={`font-bebas text-2xl uppercase tracking-wide leading-none ${theme.text}`}>{block.label}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">{block.id === 'vidriera' ? 'Secciones de productos' : 'Bloque 028 Community'}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">{block.id === 'community' ? 'Bloque 028 Community' : 'Sección de vidriera específica'}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -725,7 +740,6 @@ export default function AdminPage() {
           <button onClick={() => setActiveTab('cupones')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'cupones' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Cupones</button>
           <button onClick={() => setActiveTab('usuarios')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'usuarios' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Usuarios</button>
           <button onClick={() => setActiveTab('ofertas')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'ofertas' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Ofertas 🔥</button>
-          <button onClick={() => setActiveTab('ruleta')} className={`flex-shrink-0 flex-1 px-4 py-4 text-[11px] font-bold uppercase tracking-widest border-b-4 transition-colors ${activeTab === 'ruleta' ? `${theme.tabActive} ${theme.tabActiveText}` : theme.tabInactive}`}>Ruleta 🎁</button>
         </div>
       </div>
       <main className="max-w-4xl mx-auto p-4 md:p-8">
@@ -774,7 +788,7 @@ export default function AdminPage() {
             <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-5 mb-8">
               <div>
                 <h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>028 Community</h2>
-                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Videos, flip cards y productos mostrados en cada contenido</p>
+                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Videos, cards con flip y productos editables por video</p>
               </div>
               <button type="button" onClick={seedCommunityVideos} className="bg-[#111111] text-[#fcdb00] px-5 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#fcdb00] hover:text-[#111111] transition-all shadow-sm">Cargar videos base</button>
             </div>
@@ -1021,7 +1035,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-2 border-t pt-4 dark:border-[#333333]">
-                      <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">Ruleta: <span className={usr.hasSpun ? 'text-green-500' : 'text-gray-400'}>{usr.hasSpun ? 'Ya giró 🎁' : 'No giró'}</span></span>
+                      
                       <span className="text-[9px] font-bold uppercase text-gray-400">{usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleDateString('es-AR') : 'Reciente'}</span>
                     </div>
                   </div>
@@ -1080,68 +1094,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* --- NUEVA PESTAÑA: RULETA --- */}
-        {activeTab === 'ruleta' && (
-          <div className="animate-in fade-in duration-500">
-            <div className="flex justify-between items-end mb-8">
-              <div>
-                <h2 className={`text-4xl font-bebas uppercase tracking-wide leading-none ${theme.text}`}>Tiros de Ruleta</h2>
-                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">Registro de premios entregados</p>
-              </div>
-              <span className="bg-[#fcdb00] text-[#111111] text-[11px] font-bold px-4 py-2 rounded-lg shadow-sm">{spins.length} Tiros</span>
-            </div>
-
-            {/* ESTADÍSTICAS RÁPIDAS */}
-            {spins.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-                    {Object.entries(
-                        spins.reduce((acc, spin) => {
-                            acc[spin.prizeText] = (acc[spin.prizeText] || 0) + 1;
-                            return acc;
-                        }, {})
-                    ).map(([prize, count], idx) => (
-                        <div key={idx} className={`${theme.card} p-4 rounded-xl shadow-sm border flex flex-col justify-center items-center text-center`}>
-                            <span className="text-3xl font-bebas text-[#fcdb00] leading-none mb-1">{count}</span>
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">{prize}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* LISTA DE RESULTADOS DE RULETA */}
-            {spins.length === 0 ? (
-              <div className={`${theme.card} p-24 rounded-[3rem] border-2 border-dashed text-center flex flex-col items-center`}>
-                <i className="fas fa-gift text-gray-300 text-5xl mb-6"></i>
-                <p className="text-gray-400 font-bold uppercase text-[11px] tracking-widest">Nadie tiró la ruleta todavía</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {spins.map((spin, index) => (
-                  <div key={spin.id || index} className={`${theme.card} p-5 rounded-[1.5rem] shadow-sm border flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[#fcdb00]/50 transition-all`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-[#111111] text-[#fcdb00] flex items-center justify-center text-xl shadow-md uppercase pt-1">
-                        <i className="fas fa-user"></i>
-                      </div>
-                      <div className="overflow-hidden">
-                        <h4 className="font-bebas tracking-wide text-2xl uppercase leading-none mb-1 truncate">{spin.userName || 'Sin Nombre'}</h4>
-                        <p className="text-gray-500 font-bold text-[10px] truncate"><i className="fas fa-envelope mr-1.5 text-[#fcdb00]"></i> {spin.userEmail || 'Sin Email'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col md:items-end gap-1 border-t md:border-t-0 pt-3 md:pt-0 dark:border-[#333333]">
-                      <span className="bg-[#fcdb00]/10 border border-[#fcdb00]/30 text-[#b8952a] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg flex items-center gap-2 w-fit md:w-auto">
-                         <i className="fas fa-gift"></i> {spin.prizeText}
-                      </span>
-                      <span className="text-[9px] font-bold uppercase text-gray-400 mt-1">
-                        {spin.createdAt?.seconds ? new Date(spin.createdAt.seconds * 1000).toLocaleString('es-AR') : 'Reciente'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {activeTab === 'crear' && (<div className="animate-in fade-in duration-500 max-w-lg mx-auto"><h2 className="text-4xl font-bebas uppercase tracking-wide mb-6 text-center">Nuevo Producto</h2><form onSubmit={handleAddProduct} className={`${theme.card} p-8 rounded-[2rem] shadow-sm border flex flex-col gap-5`}><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Nombre del Producto</label><input type="text" required placeholder="Ej: BLUE RAZZ ICE" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /></div><div className="flex gap-4"><div className="flex-1"><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Precio</label><input type="number" required placeholder="26000" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /></div><div className="flex-1"><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Categoría / Marca</label><input list="category-suggestions" placeholder="Ej: Ignite v400 o Crear Nueva..." value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[12px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all uppercase ${theme.input}`} /><datalist id="category-suggestions">{uniqueCategories.map(cat => <option key={cat} value={cat} />)}</datalist></div></div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Departamento Principal</label><input list="dept-suggestions" placeholder="Elegí o escribí uno nuevo..." value={newProduct.department} onChange={e => setNewProduct({...newProduct, department: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[12px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all uppercase ${theme.input}`} /><datalist id="dept-suggestions">{availableDepartments.map(d => <option key={d} value={d} />)}</datalist></div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Link de Imagen (URL)</label><input type="url" required placeholder="https://i.postimg.cc/..." value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-[11px] border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} />{newProduct.image && (<div className="mt-4 relative h-32 rounded-xl overflow-hidden border border-dashed border-gray-300 bg-[#f2f2f2]"><img src={newProduct.image} alt="Vista previa" className="w-full h-full object-contain mix-blend-multiply" /></div>)}</div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Etiqueta y Tamaño</label><div className="flex gap-4"><input type="text" placeholder="Ej: Destacado" value={newProduct.tag} onChange={e => setNewProduct({...newProduct, tag: e.target.value})} className={`flex-1 p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all ${theme.input}`} /><select value={newProduct.cardSize} onChange={e => setNewProduct({...newProduct, cardSize: e.target.value})} className={`flex-1 p-4 rounded-xl outline-none font-bold text-xs uppercase cursor-pointer border-transparent focus:ring-2 focus:ring-[#fcdb00] ${theme.input}`}><option value="normal">📏 Tamaño Normal</option><option value="medium">🔲 Tamaño Mediano</option><option value="large">⬜ Tamaño Grande</option></select></div></div><div><label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Descripción (Biografía)</label><textarea rows="2" placeholder="Escribe aquí..." value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className={`w-full p-4 rounded-xl outline-none font-bold text-sm border-transparent focus:ring-2 focus:ring-[#fcdb00] transition-all resize-none ${theme.input}`}></textarea></div><button type="submit" disabled={isAdding} className="bg-[#fcdb00] text-[#111111] font-bebas text-xl uppercase py-4 rounded-xl mt-2 hover:bg-[#111111] hover:text-[#fcdb00] shadow-md transition-all disabled:opacity-50">{isAdding ? 'Guardando...' : 'Guardar Producto'}</button></form></div>)}
 
