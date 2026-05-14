@@ -324,6 +324,10 @@ export default function Home() {
   const [communityVideos, setCommunityVideos] = useState(INITIAL_COMMUNITY_VIDEOS);
   const [activeCommunityVideoId, setActiveCommunityVideoId] = useState(null);
   const [flippedCommunityCards, setFlippedCommunityCards] = useState({});
+  const [communityVideoFeedback, setCommunityVideoFeedback] = useState({});
+  const communityVideoRefs = useRef({});
+  const [communityProductsPanel, setCommunityProductsPanel] = useState(null);
+  const [activeStoryVideo, setActiveStoryVideo] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState('home'); 
   const [activeFilter, setActiveFilter] = useState({ dept: 'all', cat: 'all' });
@@ -331,6 +335,25 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('retiro');
   const [shippingType, setShippingType] = useState('flash'); 
+  useEffect(() => {
+    const hideInlineVideoControls = () => {
+      const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!fullscreenElement) {
+        Object.values(communityVideoRefs.current || {}).forEach((videoEl) => {
+          if (videoEl) videoEl.controls = false;
+        });
+      }
+    };
+
+    document.addEventListener('fullscreenchange', hideInlineVideoControls);
+    document.addEventListener('webkitfullscreenchange', hideInlineVideoControls);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', hideInlineVideoControls);
+      document.removeEventListener('webkitfullscreenchange', hideInlineVideoControls);
+    };
+  }, []);
+
   const [paymentMethod, setPaymentMethod] = useState('transferencia'); 
   const [shippingCost, setShippingCost] = useState(0); 
   const [clientName, setClientName] = useState('');
@@ -670,6 +693,57 @@ export default function Home() {
 
   const toggleCommunityCardFlip = (cardId) => {
     setFlippedCommunityCards(prev => ({ ...prev, [cardId]: !prev[cardId] }));
+  };
+
+
+  const flashCommunityVideoIcon = (cardId, icon) => {
+    setCommunityVideoFeedback(prev => ({ ...prev, [cardId]: icon }));
+    setTimeout(() => {
+      setCommunityVideoFeedback(prev => {
+        const next = { ...prev };
+        delete next[cardId];
+        return next;
+      });
+    }, 650);
+  };
+
+  const handleCommunityVideoTap = (cardId, videoData, e) => {
+    if (e?.target?.closest?.('button')) return;
+    const videoEl = communityVideoRefs.current[cardId];
+    if (!videoEl) return;
+
+    if (videoEl.paused) {
+      videoEl.play().then(() => {
+        trackCommunityView(videoData);
+        flashCommunityVideoIcon(cardId, 'fa-pause');
+      }).catch(() => flashCommunityVideoIcon(cardId, 'fa-play'));
+    } else {
+      videoEl.pause();
+      flashCommunityVideoIcon(cardId, 'fa-play');
+    }
+  };
+
+  const handleCommunityFullscreen = async (cardId, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const videoEl = communityVideoRefs.current[cardId];
+    if (!videoEl) return;
+
+    videoEl.controls = true;
+
+    try {
+      if (videoEl.requestFullscreen) {
+        await videoEl.requestFullscreen();
+      } else if (videoEl.webkitEnterFullscreen) {
+        videoEl.webkitEnterFullscreen();
+      } else if (videoEl.webkitRequestFullscreen) {
+        await videoEl.webkitRequestFullscreen();
+      }
+    } catch (err) {
+      videoEl.controls = true;
+    }
   };
 
   const openCommunityFeaturedVideo = (video) => {
@@ -1043,122 +1117,146 @@ export default function Home() {
     const CommunityProductButton = ({ video, product, compact = false }) => (
       <button
         onClick={(e) => handleCommunityProductClick(video, product, e)}
-        className={`${compact ? 'w-10 h-10 rounded-xl text-sm' : 'w-full py-2.5 rounded-xl text-[10px]'} bg-[#fcdb00] text-[#111111] font-black uppercase tracking-widest hover:bg-[#f5d300] active:scale-95 transition-all font-poppins flex items-center justify-center gap-2`}
+        className={`${compact ? 'w-10 h-10 rounded-xl text-sm' : 'w-full py-3 rounded-xl text-[10px]'} bg-[#fcdb00] text-[#111111] font-black uppercase tracking-widest hover:bg-[#f5d300] active:scale-95 transition-all font-poppins flex items-center justify-center gap-2`}
         title={product ? `Agregar ${product.name}` : 'Ver catálogo'}
       >
-        {compact ? <i className="fas fa-cart-plus"></i> : <>{product ? 'Ver productos' : 'Catálogo'} <i className={`fas ${product ? 'fa-box-open' : 'fa-arrow-right'} text-[10px]`}></i></>}
+        {compact ? <i className="fas fa-cart-plus"></i> : <>{product ? 'Agregar' : 'Catálogo'} <i className={`fas ${product ? 'fa-cart-plus' : 'fa-arrow-right'} text-[10px]`}></i></>}
       </button>
     );
 
-    const renderCommunityCard = (video, index) => {
+    const renderEditorialFlipCard = (video, index) => {
+      const productsInVideo = getProductsShownForVideo(video);
+      const mainProduct = productsInVideo[0] || null;
       const cardId = video.dbId || video.id || `community-${index}`;
       const isFlipped = !!flippedCommunityCards[cardId];
-      const productList = getProductsShownForVideo(video);
-      const mainProduct = productList[0] || null;
 
       return (
         <article
           key={cardId}
-          className="snap-center flex-shrink-0 w-[82vw] sm:w-[320px] lg:w-[350px] community-card-enter"
-          style={{ transitionDelay: `${index * 80}ms` }}
+          className="snap-center flex-shrink-0 w-[76vw] sm:w-[300px] md:w-[320px] community-card-enter"
+          style={{ transitionDelay: `${index * 75}ms` }}
         >
-          <div style={{ perspective: '1600px' }} className="h-[468px] md:h-[520px]">
+          <div className="relative aspect-[9/16]" style={{ perspective: '1600px' }}>
             <div
+              className="absolute inset-0"
               style={{
-                position: 'relative',
-                width: '100%',
-                height: '100%',
                 transformStyle: 'preserve-3d',
                 transition: 'transform 720ms cubic-bezier(0.22, 0.82, 0.32, 1)',
                 transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
               }}
             >
+              {/* FRENTE: REEL */}
               <div
-                style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                className="rounded-[1.8rem] overflow-hidden bg-[#0d0d0d] border border-[#1f1f1f] shadow-[0_16px_38px_rgba(0,0,0,0.18)]"
+                className="absolute inset-0 rounded-[2rem] overflow-hidden bg-black border border-black/10 shadow-[0_18px_42px_rgba(0,0,0,0.16)] group"
+                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
-                <div className="relative h-[348px] md:h-[390px] bg-black overflow-hidden">
-                  <video
-                    src={video.videoUrl}
-                    className="w-full h-full object-cover"
-                    controls
-                    playsInline
-                    preload="metadata"
-                    onPlay={() => trackCommunityView(video)}
-                  />
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/70 to-transparent"></div>
-                  <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
-                    <div className="flex flex-wrap gap-2">
-                      {video.featured && (
-                        <span className="bg-[#fcdb00] text-[#111111] px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins">Destacado</span>
-                      )}
-                      <span className="bg-black/75 text-white px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins border border-white/10">{video.type || '028'}</span>
+                <video
+                  ref={(el) => { if (el) communityVideoRefs.current[cardId] = el; }}
+                  src={video.videoUrl}
+                  className="w-full h-full object-cover cursor-pointer"
+                  playsInline
+                  preload="metadata"
+                  onClick={(e) => handleCommunityVideoTap(cardId, video, e)}
+                  onPlay={() => trackCommunityView(video)}
+                />
+
+                <button
+                  type="button"
+                  onClick={(e) => handleCommunityVideoTap(cardId, video, e)}
+                  className="absolute inset-0 z-[1] cursor-pointer"
+                  aria-label="Reproducir o pausar video"
+                ></button>
+
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent z-[2]"></div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black/84 via-black/36 to-transparent z-[2]"></div>
+
+                {communityVideoFeedback[cardId] && (
+                  <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center justify-center text-white shadow-2xl animate-in zoom-in-95 fade-in duration-200">
+                      <i className={`fas ${communityVideoFeedback[cardId]} text-2xl`}></i>
                     </div>
                   </div>
+                )}
+
+                <div className="absolute top-3 left-3 right-3 z-[6] flex items-start justify-between gap-2 pointer-events-none">
+                  <div className="flex gap-2 flex-wrap">
+                    {video.featured && <span className="bg-[#fcdb00] text-[#111111] px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins">Destacado</span>}
+                    <span className="bg-black/70 text-white px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest font-poppins border border-white/10">{video.type || 'Review'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleCommunityFullscreen(cardId, e)}
+                    className="pointer-events-auto w-9 h-9 rounded-full bg-black/62 hover:bg-black/78 border border-white/15 backdrop-blur-md text-white flex items-center justify-center transition-all"
+                    aria-label="Ver video en pantalla completa"
+                  >
+                    <i className="fas fa-expand text-[12px]"></i>
+                  </button>
                 </div>
 
-                <div className="px-4 pb-4 pt-5 md:px-5 md:pb-5 md:pt-5 flex flex-col h-[120px] md:h-[130px]">
-                  <h3 className="font-bebas text-[2rem] md:text-[2.15rem] uppercase tracking-wide leading-none mb-3 line-clamp-1 text-white">{video.title || 'Contenido real 028'}</h3>
-
-                  <div className="mt-auto grid grid-cols-[1fr_auto] gap-2 items-center">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-full py-2.5 rounded-xl bg-[#161616] hover:bg-[#1d1d1d] border border-white/10 text-white text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] transition-all font-poppins flex items-center justify-center gap-2"
-                    >
-                      <i className="fas fa-box-open text-[#fcdb00]"></i> Ver productos
-                    </button>
-                    {mainProduct && <CommunityProductButton video={video} product={mainProduct} compact />}
-                  </div>
+                <div className="absolute left-4 right-4 bottom-4 z-[6] pointer-events-none">
+                  <h3 className="font-bebas text-3xl uppercase tracking-wide leading-none text-white drop-shadow-md mb-3 line-clamp-2">{video.title || 'Contenido real 028'}</h3>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
+                    className="pointer-events-auto w-full bg-white text-[#111111] rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest font-poppins hover:bg-[#fcdb00] transition-all flex items-center justify-center gap-2 shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
+                  >
+                    <i className="fas fa-box-open"></i> Ver productos {productsInVideo.length > 0 ? `(${productsInVideo.length})` : ''}
+                  </button>
                 </div>
               </div>
 
+              {/* DORSO: PRODUCTOS */}
               <div
-                style={{ position: 'absolute', inset: 0, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                className="rounded-[1.8rem] overflow-hidden bg-[#0d0d0d] border border-[#1f1f1f] shadow-[0_16px_38px_rgba(0,0,0,0.18)]"
+                className="absolute inset-0 rounded-[2rem] overflow-hidden bg-[#0d0d0d] border border-black/10 shadow-[0_18px_42px_rgba(0,0,0,0.18)] text-white"
+                style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
                 <div className="h-full p-4 md:p-5 flex flex-col">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="min-w-0">
                       <p className="text-[#fcdb00] text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-2">Productos del video</p>
-                      <h3 className="font-bebas text-[2rem] uppercase tracking-wide leading-none line-clamp-2 text-white">{video.title || 'Contenido real 028'}</h3>
+                      <h3 className="font-bebas text-3xl uppercase leading-none tracking-wide line-clamp-2">{video.title || '028 Community'}</h3>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-10 h-10 rounded-full bg-[#161616] hover:bg-[#1d1d1d] border border-white/10 transition-all flex items-center justify-center text-white/80 hover:text-white flex-shrink-0"
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
+                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/16 border border-white/10 text-white flex items-center justify-center flex-shrink-0 transition-all"
                       title="Volver al video"
                     >
                       <i className="fas fa-undo text-sm"></i>
                     </button>
                   </div>
 
-                  <div className="grid gap-3 overflow-y-auto pr-1 flex-1 no-scrollbar">
-                    {productList.length > 0 ? productList.slice(0,3).map((product) => (
-                      <div key={`product-${cardId}-${product.id}`} className="bg-[#f7f7f7] text-[#111111] rounded-[1.15rem] p-3 flex items-center gap-3 border border-black/5">
-                        <div className="w-12 h-12 rounded-xl bg-white p-1.5 flex-shrink-0">
+                  <div className="grid gap-3 overflow-y-auto no-scrollbar pr-1 flex-1 content-start">
+                    {productsInVideo.length ? productsInVideo.slice(0, 4).map(product => (
+                      <div key={`flip-${cardId}-${product.id}`} className="bg-white text-[#111111] rounded-[1.35rem] p-3 flex items-center gap-3 border border-white/10 shadow-sm">
+                        <div className="w-14 h-14 bg-[#f2f2f2] rounded-xl p-1.5 flex-shrink-0">
                           <img src={product.image} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bebas text-lg uppercase tracking-wide truncate leading-none">{product.name}</p>
-                          <p className="text-[#111111] text-sm font-black mt-1">{CONFIG.currencySymbol}{formatPrice(product.price)}</p>
+                          <p className="font-bebas text-xl uppercase leading-none truncate">{product.name}</p>
+                          <p className="text-sm font-black mt-1">{CONFIG.currencySymbol}{formatPrice(product.price)}</p>
                         </div>
                         <CommunityProductButton video={video} product={product} compact />
                       </div>
                     )) : (
-                      <div className="bg-[#161616] border border-white/10 rounded-[1.2rem] p-5 text-center">
+                      <div className="bg-white/8 border border-white/10 rounded-[1.35rem] p-5 text-center mt-4">
                         <i className="fas fa-box-open text-[#fcdb00] text-2xl mb-3"></i>
-                        <p className="text-white text-sm font-black uppercase tracking-widest font-poppins">Sin productos cargados</p>
+                        <p className="text-sm font-black uppercase tracking-widest font-poppins">Sin productos cargados</p>
+                        <p className="text-white/50 text-xs mt-2 font-poppins">Agregalos desde el admin usando productos mostrados.</p>
                       </div>
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mt-4">
                     <button
-                      onClick={(e) => { e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-full py-3 rounded-xl bg-[#161616] hover:bg-[#1d1d1d] border border-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all font-poppins"
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
+                      className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/16 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all font-poppins"
                     >
                       Volver
                     </button>
                     <button
+                      type="button"
                       onClick={(e) => handleCommunityProductClick(video, mainProduct, e)}
                       className="w-full py-3 rounded-xl bg-[#fcdb00] text-[#111111] text-[10px] font-black uppercase tracking-widest transition-all font-poppins hover:bg-[#f5d300]"
                     >
@@ -1174,25 +1272,23 @@ export default function Home() {
     };
 
     return (
-      <section id="community-section" className="mb-14 md:mb-18 reveal-on-scroll">
-        <div className="px-1 md:px-0">
-          <div className="pt-2 mb-4 md:mb-6">
+      <section id="community-section" className="mb-16 md:mb-20 reveal-on-scroll">
+        <div className="flex items-end justify-between gap-4 mb-5 md:mb-7">
+          <div>
             <span className="inline-flex items-center gap-2 bg-[#111111] text-white px-3 py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-3">
-              <i className="fas fa-users text-[9px] text-[#fcdb00]"></i> Comunidad real
+              <i className="fas fa-users text-[#fcdb00]"></i> Comunidad real
             </span>
-            <h2 className="text-4xl md:text-6xl font-bebas uppercase tracking-wide leading-none text-[#111111]">
-              028 Community
-            </h2>
+            <h2 className="text-4xl md:text-6xl font-bebas uppercase tracking-wide leading-none text-[#111111]">028 Community</h2>
           </div>
+          <p className="hidden md:block max-w-sm text-right text-xs font-bold uppercase tracking-widest text-gray-400 font-poppins">Reels reales con productos comprables</p>
+        </div>
 
-          <div className="mt-2 flex overflow-x-auto gap-3 md:gap-5 no-scrollbar snap-x snap-mandatory pb-0 pr-6">
-            {visibleVideos.map((video, index) => renderCommunityCard(video, index))}
-          </div>
+        <div className="flex overflow-x-auto gap-3 md:gap-5 no-scrollbar snap-x snap-mandatory pb-2 pr-8">
+          {visibleVideos.map((video, index) => renderEditorialFlipCard(video, index))}
         </div>
       </section>
     );
   };
-
 
   
 const renderSingleHomeSection = (sec, sectionIndex = 0) => {
