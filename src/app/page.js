@@ -67,6 +67,22 @@ const INITIAL_COMMUNITY_VIDEOS = [
     views: 0,
     clicks: 0
   },
+  {
+    id: 'community_video_4',
+    title: 'GiuliAnny x 028',
+    creator: '@giulianny',
+    type: 'Influencer',
+    description: 'Nuevo contenido real para sumar prueba social y mostrar productos destacados.',
+    videoUrl: 'https://res.cloudinary.com/dcdwnayy2/video/upload/v1778713680/GiuliAnny_028_gjnrdz.mp4',
+    productId: 17,
+    productsShown: [17, 26, 33],
+    ctaText: 'Ver productos del video',
+    featured: false,
+    order: 4,
+    isHidden: false,
+    views: 0,
+    clicks: 0
+  }
 ];
 
 const buildDefaultHomeLayout = (sections = []) => {
@@ -708,15 +724,24 @@ export default function Home() {
   };
 
   const handleCommunityVideoTap = (cardId, videoData, e) => {
-    if (e?.target?.closest?.('button')) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const videoEl = communityVideoRefs.current[cardId];
     if (!videoEl) return;
 
     if (videoEl.paused) {
-      videoEl.play().then(() => {
+      const playPromise = videoEl.play();
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise.then(() => {
+          trackCommunityView(videoData);
+          flashCommunityVideoIcon(cardId, 'fa-pause');
+        }).catch(() => flashCommunityVideoIcon(cardId, 'fa-play'));
+      } else {
         trackCommunityView(videoData);
         flashCommunityVideoIcon(cardId, 'fa-pause');
-      }).catch(() => flashCommunityVideoIcon(cardId, 'fa-play'));
+      }
     } else {
       videoEl.pause();
       flashCommunityVideoIcon(cardId, 'fa-play');
@@ -1147,7 +1172,7 @@ export default function Home() {
             >
               {/* FRENTE: REEL */}
               <div
-                className="absolute inset-0 rounded-[2rem] overflow-hidden bg-black border border-black/10 shadow-[0_18px_42px_rgba(0,0,0,0.16)] group"
+                className="absolute inset-0 rounded-[2rem] overflow-hidden bg-black border border-black/8 shadow-[0_12px_28px_rgba(0,0,0,0.10)] group"
                 style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
                 <video
@@ -1156,14 +1181,13 @@ export default function Home() {
                   className="w-full h-full object-cover cursor-pointer"
                   playsInline
                   preload="metadata"
-                  onClick={(e) => handleCommunityVideoTap(cardId, video, e)}
                   onPlay={() => trackCommunityView(video)}
                 />
 
                 <button
                   type="button"
                   onClick={(e) => handleCommunityVideoTap(cardId, video, e)}
-                  className="absolute inset-0 z-[1] cursor-pointer"
+                  className="absolute inset-0 z-[1] cursor-pointer touch-manipulation"
                   aria-label="Reproducir o pausar video"
                 ></button>
 
@@ -1194,11 +1218,12 @@ export default function Home() {
                 </div>
 
                 <div className="absolute left-4 right-4 bottom-4 z-[6] pointer-events-none">
-                  <h3 className="font-bebas text-3xl uppercase tracking-wide leading-none text-white drop-shadow-md mb-3 line-clamp-2">{video.title || 'Contenido real 028'}</h3>
+                  <h3 className="font-bebas text-3xl uppercase tracking-wide leading-none text-white drop-shadow-md mb-1 line-clamp-2">{video.title || 'Contenido real 028'}</h3>
+                  <p className="text-[12px] md:text-[13px] text-white/60 font-poppins font-medium mb-3 line-clamp-1">{video.creator || '@influencer'}</p>
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                    className="pointer-events-auto w-full bg-white text-[#111111] rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest font-poppins hover:bg-[#fcdb00] transition-all flex items-center justify-center gap-2 shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
+                    className="pointer-events-auto w-[92%] mx-auto bg-white/88 text-[#111111] rounded-2xl py-2.5 text-[10px] font-black uppercase tracking-widest font-poppins hover:bg-white transition-all flex items-center justify-center gap-2 shadow-[0_10px_22px_rgba(0,0,0,0.14)] backdrop-blur-md border border-white/45"
                   >
                     <i className="fas fa-box-open"></i> Ver productos {productsInVideo.length > 0 ? `(${productsInVideo.length})` : ''}
                   </button>
@@ -1207,19 +1232,33 @@ export default function Home() {
 
               {/* DORSO: PRODUCTOS */}
               <div
-                className="absolute inset-0 rounded-[2rem] overflow-hidden bg-[#0d0d0d] border border-black/10 shadow-[0_18px_42px_rgba(0,0,0,0.18)] text-white"
+                className="absolute inset-0 rounded-[2rem] overflow-hidden text-white border border-white/12 shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
                 style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               >
-                <div className="h-full p-4 md:p-5 flex flex-col">
+                <video
+                  src={video.videoUrl}
+                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35"
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                  aria-hidden="true"
+                />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(252,219,0,0.10),transparent_28%)]"></div>
+                <div className="absolute inset-0 bg-black/42"></div>
+                <div className="absolute inset-0 backdrop-blur-[18px] bg-white/[0.07]"></div>
+                <div className="absolute inset-[1px] rounded-[1.95rem] border border-white/10"></div>
+                <div className="relative h-full p-4 md:p-5 flex flex-col">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="min-w-0">
-                      <p className="text-[#fcdb00] text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-2">Productos del video</p>
-                      <h3 className="font-bebas text-3xl uppercase leading-none tracking-wide line-clamp-2">{video.title || '028 Community'}</h3>
+                      <p className="text-white/72 text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-2">Productos del video</p>
+                      <h3 className="font-bebas text-3xl uppercase leading-none tracking-wide line-clamp-2 text-white">{video.title || '028 Community'}</h3>
+                      <p className="text-[12px] text-white/58 font-poppins mt-1 line-clamp-1">{video.creator || '@influencer'}</p>
                     </div>
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/16 border border-white/10 text-white flex items-center justify-center flex-shrink-0 transition-all"
+                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/16 border border-white/18 backdrop-blur-xl text-white flex items-center justify-center flex-shrink-0 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
                       title="Volver al video"
                     >
                       <i className="fas fa-undo text-sm"></i>
@@ -1228,18 +1267,18 @@ export default function Home() {
 
                   <div className="grid gap-3 overflow-y-auto no-scrollbar pr-1 flex-1 content-start">
                     {productsInVideo.length ? productsInVideo.slice(0, 4).map(product => (
-                      <div key={`flip-${cardId}-${product.id}`} className="bg-white text-[#111111] rounded-[1.35rem] p-3 flex items-center gap-3 border border-white/10 shadow-sm">
-                        <div className="w-14 h-14 bg-[#f2f2f2] rounded-xl p-1.5 flex-shrink-0">
-                          <img src={product.image} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                      <div key={`flip-${cardId}-${product.id}`} className="bg-white/[0.11] backdrop-blur-2xl rounded-[1.35rem] p-3 flex items-center gap-3 border border-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_22px_rgba(0,0,0,0.14)]">
+                        <div className="w-14 h-14 bg-white/16 rounded-xl p-1.5 flex-shrink-0 backdrop-blur-xl border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
+                          <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bebas text-xl uppercase leading-none truncate">{product.name}</p>
-                          <p className="text-sm font-black mt-1">{CONFIG.currencySymbol}{formatPrice(product.price)}</p>
+                          <p className="font-bebas text-xl uppercase leading-none truncate text-white">{product.name}</p>
+                          <p className="text-sm font-black mt-1 text-white">{CONFIG.currencySymbol}{formatPrice(product.price)}</p>
                         </div>
                         <CommunityProductButton video={video} product={product} compact />
                       </div>
                     )) : (
-                      <div className="bg-white/8 border border-white/10 rounded-[1.35rem] p-5 text-center mt-4">
+                      <div className="bg-white/[0.10] backdrop-blur-2xl border border-white/14 rounded-[1.35rem] p-5 text-center mt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
                         <i className="fas fa-box-open text-[#fcdb00] text-2xl mb-3"></i>
                         <p className="text-sm font-black uppercase tracking-widest font-poppins">Sin productos cargados</p>
                         <p className="text-white/50 text-xs mt-2 font-poppins">Agregalos desde el admin usando productos mostrados.</p>
@@ -1251,7 +1290,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCommunityCardFlip(cardId); }}
-                      className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/16 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest transition-all font-poppins"
+                      className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/16 backdrop-blur-xl border border-white/14 text-white text-[10px] font-black uppercase tracking-widest transition-all font-poppins shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]"
                     >
                       Volver
                     </button>
@@ -1272,18 +1311,18 @@ export default function Home() {
     };
 
     return (
-      <section id="community-section" className="mb-16 md:mb-20 reveal-on-scroll">
+      <section id="community-section" className="mb-16 md:mb-20 reveal-on-scroll bg-transparent">
         <div className="flex items-end justify-between gap-4 mb-5 md:mb-7">
           <div>
-            <span className="inline-flex items-center gap-2 bg-[#111111] text-white px-3 py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-[0.18em] font-poppins mb-3">
+            <span className="inline-flex items-center gap-2 bg-[#111111] text-white px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] font-poppins mb-3 shadow-none">
               <i className="fas fa-users text-[#fcdb00]"></i> Comunidad real
             </span>
-            <h2 className="text-4xl md:text-6xl font-bebas uppercase tracking-wide leading-none text-[#111111]">028 Community</h2>
+            <h2 className="font-bebas text-[44px] md:text-6xl uppercase tracking-wide leading-none text-[#111111]" style={{ WebkitTextStroke: '0.25px #111111' }}>028 Community</h2>
           </div>
           <p className="hidden md:block max-w-sm text-right text-xs font-bold uppercase tracking-widest text-gray-400 font-poppins">Reels reales con productos comprables</p>
         </div>
 
-        <div className="flex overflow-x-auto gap-3 md:gap-5 no-scrollbar snap-x snap-mandatory pb-2 pr-8">
+        <div className="flex overflow-x-auto gap-3 md:gap-5 no-scrollbar snap-x snap-mandatory pb-1 pr-8 bg-transparent">
           {visibleVideos.map((video, index) => renderEditorialFlipCard(video, index))}
         </div>
       </section>
@@ -1365,7 +1404,7 @@ const renderSingleHomeSection = (sec, sectionIndex = 0) => {
     );
   };
   return (
-    <div className="bg-[#f6f6f6] text-[#111111] font-poppins flex flex-col relative min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
+    <div className="bg-[#f8f8f8] text-[#111111] font-poppins flex flex-col relative min-h-screen selection:bg-[#fcdb00] selection:text-[#111111]">
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;700;900&display=swap');
         .font-bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
